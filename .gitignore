@@ -1,0 +1,7 @@
+/nperf
+/nperfd
+
+*.o
+*.d
+
+.*.swp
