@@ -331,9 +331,26 @@ static int connect_workers(struct client_config *config)
 
 static int run_test(struct client_config *config)
 {
+	struct timespec ts0, ts1;
+	int ret;
+
 	wsync_reset_counter(&client_worker_sync);
 	wsync_set_state(&client_worker_sync, WS_RUN);
-	return wsync_sleep(&client_worker_sync, config->test_length);
+
+	ret = clock_gettime(CLOCK_MONOTONIC, &ts0);
+	if (ret < 0)
+		return -errno;
+	ret = wsync_sleep(&client_worker_sync, config->test_length);
+	if (ret < 0)
+		return ret;
+	cancel_workers(&client_config);
+	ret = clock_gettime(CLOCK_MONOTONIC, &ts1);
+	if (ret < 0)
+		return -errno;
+
+	config->elapsed = (ts1.tv_sec - ts0.tv_sec) +
+			  1E-9 * (ts1.tv_nsec - ts0.tv_nsec);
+	return 0;
 }
 
 static int collect_stats(struct client_config *config)
@@ -389,7 +406,6 @@ int main(int argc, char *argv[])
 	if (ret < 0)
 		goto err_workers;
 
-	cancel_workers(&client_config);
 	collect_stats(&client_config);
 	cleanup_buffers(&client_config);
 	return 0;

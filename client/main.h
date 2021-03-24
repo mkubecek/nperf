@@ -19,6 +19,7 @@ struct client_config {
 	unsigned long			buff_size;
 	unsigned long			buffers_size;
 	struct client_worker_data       *workers_data;
+	double				elapsed;
 };
 
 extern struct client_config client_config;
