@@ -8,7 +8,7 @@ LDFLAGS = -pthread
 
 SOBJS = server/main.o server/control.o server/worker.o
 COBJS = client/main.o client/worker.o
-UOBJS = common.o
+UOBJS = common.o stats.o
 OBJS = $(SOBJS) $(COBJS) $(UOBJS)
 
 TARGETS = nperfd nperf

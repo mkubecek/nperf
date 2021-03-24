@@ -5,7 +5,18 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "common.h"
+struct xfer_stats_1 {
+	uint64_t	msgs;
+	uint64_t	calls;
+	uint64_t	bytes;
+};
+
+struct xfer_stats {
+	struct xfer_stats_1	rx;
+	struct xfer_stats_1	tx;
+};
+
+void xfer_stats_print(const struct xfer_stats *stats);
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 static inline uint64_t ntoh64(uint64_t x)
@@ -28,17 +39,6 @@ static inline uint64_t hton64(uint64_t x)
 	return x;
 }
 #endif
-
-struct xfer_stats_1 {
-	uint64_t	msgs;
-	uint64_t	calls;
-	uint64_t	bytes;
-};
-
-struct xfer_stats {
-	struct xfer_stats_1	rx;
-	struct xfer_stats_1	tx;
-};
 
 static inline void xfer_stats_reset(struct xfer_stats *stats)
 {
@@ -88,18 +88,6 @@ static inline void xfer_stats_add(struct xfer_stats *dst,
 {
 	xfer_stats_1_add(&dst->rx, &src->rx);
 	xfer_stats_1_add(&dst->tx, &src->tx);
-}
-
-static inline void xfer_stats_1_print(const struct xfer_stats_1 *stats)
-{
-	printf("%8" PRIu64 "%8" PRIu64 "%12" PRIu64,
-	       stats->msgs, stats->calls, stats->bytes); 
-}
-
-static inline void xfer_stats_print(const struct xfer_stats *stats)
-{
-	xfer_stats_1_print(&stats->rx);
-	xfer_stats_1_print(&stats->tx);
 }
 
 #endif /* _NPERF_STATS_H */
