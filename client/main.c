@@ -355,21 +355,24 @@ static int run_test(struct client_config *config)
 
 static int collect_stats(struct client_config *config)
 {
-	struct xfer_stats sum;
+	unsigned int test_mode = config->test_mode;
+	double elapsed = config->elapsed;
+	struct xfer_stats sum_client;
 	unsigned int i;
 
-	xfer_stats_reset(&sum);
+	printf("test time: %.2lf\n\n", elapsed);
+	xfer_stats_reset(&sum_client);
 	for (i = 0; i < config->n_threads; i++) {
 		const struct xfer_stats *wstats =
 			&config->workers_data[i].stats;
 
-		printf("reader%02u: ", i);
-		xfer_stats_print(wstats);
+		printf("client%02u: ", i);
+		xfer_stats_print_thread(wstats, elapsed, test_mode);
 		putchar('\n');
-		xfer_stats_add(&sum, wstats);
+		xfer_stats_add(&sum_client, wstats);
 	}
 	printf("total:    ");
-	xfer_stats_print(&sum);
+	xfer_stats_print_thread(&sum_client, elapsed, test_mode);
 	putchar('\n');
 
 	return 0;

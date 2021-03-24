@@ -16,7 +16,8 @@ struct xfer_stats {
 	struct xfer_stats_1	tx;
 };
 
-void xfer_stats_print(const struct xfer_stats *stats);
+void xfer_stats_print_thread(const struct xfer_stats *stats, double elapsed,
+			     unsigned int test_mode);
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 static inline uint64_t ntoh64(uint64_t x)
