@@ -360,10 +360,13 @@ static int collect_stats(struct client_config *config)
 
 	xfer_stats_reset(&sum);
 	for (i = 0; i < config->n_threads; i++) {
+		const struct xfer_stats *wstats =
+			&config->workers_data[i].stats;
+
 		printf("reader%02u: ", i);
-		xfer_stats_print(&config->workers_data[i].stats);
+		xfer_stats_print(wstats);
 		putchar('\n');
-		xfer_stats_add(&sum, &config->workers_data[i].stats);
+		xfer_stats_add(&sum, wstats);
 	}
 	printf("total:    ");
 	xfer_stats_print(&sum);
