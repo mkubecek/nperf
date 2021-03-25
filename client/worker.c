@@ -71,17 +71,33 @@ int worker_setup(struct client_worker_data *data)
 
 int worker_connect(struct client_worker_data *data)
 {
-	int addr_len;
+	union sockaddr_any local_addr;
+	socklen_t addr_len;
 	int ret;
 
-	addr_len = sockaddr_length(&test_addr);
-	if (addr_len < 0)
-		return addr_len;
+	ret = sockaddr_length(&test_addr);
+	if (ret < 0)
+		return ret;
+	addr_len = ret;
 	ret = connect(data->sd, &test_addr.sa, addr_len);
 	if (ret < 0)
 		return ret;
 
+	addr_len = sizeof(local_addr);
+	ret = getsockname(data->sd, &local_addr.sa, &addr_len);
+	if (ret < 0) {
+		ret = -errno;
+		goto err_close;
+	}
+	ret = sockaddr_get_port(&local_addr);
+	if (ret < 0)
+		goto err_close;
+	data->client_port = ret;
+
 	return 0;
+err_close:
+	close(data->sd);
+	return ret;
 }
 
 static int recv_msg(struct client_worker_data *data, bool *eof)
