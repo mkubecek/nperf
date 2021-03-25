@@ -403,7 +403,6 @@ err:
 
 static int collect_stats(struct client_config *config)
 {
-	unsigned int test_mode = config->test_mode;
 	struct xfer_stats sum_client, sum_server;
 	double elapsed = config->elapsed;
 	struct xfer_stats *server_stats;
@@ -415,27 +414,24 @@ static int collect_stats(struct client_config *config)
 	printf("test time: %.3lf\n\n", elapsed);
 
 	xfer_stats_reset(&sum_client);
-	xfer_stats_thread_header("client", test_mode);
+	xfer_stats_raw_header("client");
 	for (i = 0; i < config->n_threads; i++) {
 		const struct xfer_stats *wstats =
 			&config->workers_data[i].stats;
 
-		xfer_stats_print_thread(wstats, elapsed, test_mode, i);
+		xfer_stats_print_raw(wstats, i);
 		xfer_stats_add(&sum_client, wstats);
 	}
-	xfer_stats_print_thread(&sum_client, elapsed, test_mode,
-				XFER_STATS_TOTAL);
+	xfer_stats_print_raw(&sum_client, XFER_STATS_TOTAL);
 	putchar('\n');
 
 	xfer_stats_reset(&sum_server);
-	xfer_stats_thread_header("server", test_mode);
+	xfer_stats_raw_header("server");
 	for (i = 0; i < config->n_threads; i++) {
-		xfer_stats_print_thread(&server_stats[i], elapsed,
-					test_mode, i);
+		xfer_stats_print_raw(&server_stats[i], i);
 		xfer_stats_add(&sum_server, &server_stats[i]);
 	}
-	xfer_stats_print_thread(&sum_server, elapsed, test_mode,
-				XFER_STATS_TOTAL);
+	xfer_stats_print_raw(&sum_server, XFER_STATS_TOTAL);
 	putchar('\n');
 
 	return 0;
