@@ -360,19 +360,19 @@ static int collect_stats(struct client_config *config)
 	struct xfer_stats sum_client;
 	unsigned int i;
 
-	printf("test time: %.2lf\n\n", elapsed);
+	printf("test time: %.3lf\n\n", elapsed);
 	xfer_stats_reset(&sum_client);
+	xfer_stats_thread_header("client", test_mode);
 	for (i = 0; i < config->n_threads; i++) {
 		const struct xfer_stats *wstats =
 			&config->workers_data[i].stats;
 
-		printf("client%02u: ", i);
-		xfer_stats_print_thread(wstats, elapsed, test_mode);
+		xfer_stats_print_thread(wstats, elapsed, test_mode, i);
 		putchar('\n');
 		xfer_stats_add(&sum_client, wstats);
 	}
-	printf("total:    ");
-	xfer_stats_print_thread(&sum_client, elapsed, test_mode);
+	xfer_stats_print_thread(&sum_client, elapsed, test_mode,
+				XFER_STATS_TOTAL);
 	putchar('\n');
 
 	return 0;
