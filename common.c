@@ -121,8 +121,11 @@ int ctrl_send_msg(int sd, const void *buff, unsigned int length)
 
 	while (rest > 0) {
 		chunk = send(sd, bp, rest, 0);
-		if (chunk < 0)
+		if (chunk < 0) {
+			if (errno == EINTR)
+				continue;
 			return -errno;
+		}
 
 		bp += chunk;
 		rest -= chunk;
@@ -140,8 +143,11 @@ int ctrl_recv_msg(int sd, void *buff, unsigned int length)
 
 	while (rest > length - sizeof(*hdr)) {
 		chunk = recv(sd, bp, rest, 0);
-		if (chunk < 0)
+		if (chunk < 0) {
+			if (errno == EINTR)
+				continue;
 			return -errno;
+		}
 		if (!chunk)
 			return -EINVAL;
 
