@@ -9,6 +9,7 @@ struct client_config {
 	uint16_t			test_port;
 	unsigned int			test_mode;
 	unsigned int			test_length;
+	unsigned int			n_iter;
 	unsigned int			n_threads;
 	unsigned int			rcvbuf_size;
 	unsigned int			sndbuf_size;

@@ -19,9 +19,12 @@
 #include "main.h"
 #include "worker.h"
 
-const char *opts = "H:l:m:M:p:s:S:t:n";
+#define MAX_ITERATIONS INT_MAX
+
+const char *opts = "H:i:l:m:M:p:s:S:t:n";
 const struct option long_opts[] = {
 	{ .name = "host",		.has_arg = 1,	.val = 'H' },
+	{ .name = "iterate",		.has_arg = 1,	.val = 'i' },
 	{ .name = "seconds",		.has_arg = 1,	.val = 'l' },
 	{ .name = "msg-length",		.has_arg = 1,	.val = 'm' },
 	{ .name = "threads",		.has_arg = 1,	.val = 'M' },
@@ -38,6 +41,7 @@ struct client_config client_config = {
 	.ctrl_port	= DEFAULT_PORT,
 	.test_mode	= MODE_TCP_STREAM,
 	.test_length	= 10,
+	.n_iter		= 1,
 	.n_threads	= 1,
 	.tcp_nodelay	= false,
 };
@@ -69,6 +73,13 @@ static int parse_cmdline(int argc, char *argv[], struct client_config *config)
 		switch(c) {
 		case 'H':
 			config->server_host = optarg;
+			break;
+		case 'i':
+			ret = parse_ulong_range("iterations", optarg, &val,
+						0, MAX_ITERATIONS);
+			if (ret < 0)
+				return -EINVAL;
+			config->n_iter = val;
 			break;
 		case 'l':
 			ret = parse_ulong_range("test length", optarg, &val,
@@ -538,6 +549,7 @@ err:
 
 int main(int argc, char *argv[])
 {
+	unsigned int iter;
 	int ret;
 
 	ret = parse_cmdline(argc, argv, &client_config);
@@ -547,6 +559,7 @@ int main(int argc, char *argv[])
 	printf("port: %hu\n", client_config.ctrl_port);
 	printf("rcvbuf_size: %u\n", client_config.rcvbuf_size);
 	printf("sndbuf_size: %u\n", client_config.sndbuf_size);
+	putchar('\n');
 
 	ret = client_init();
 	if (ret < 0)
@@ -558,7 +571,12 @@ int main(int argc, char *argv[])
 	if (ret < 0)
 		goto out_ws;
 
-	ret = one_iteration(&client_config);
+	for (iter = 0; iter < client_config.n_iter; iter++) {
+		printf("iteration %u\n", iter + 1);
+		ret = one_iteration(&client_config);
+		if (ret < 0)
+			break;
+	}
 
 	free_buffers(&client_config);
 out_ws:
