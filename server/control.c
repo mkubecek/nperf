@@ -77,7 +77,7 @@ static int prepare_buffers(struct server_ctrl_config *config)
 {
 	unsigned int i;
 	int ret;
-       
+
 	config->buffers = mmap(NULL, config->buffers_size,
 			       PROT_READ | PROT_WRITE,
 			       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -107,7 +107,7 @@ static void cleanup_buffers(struct server_ctrl_config *config)
 }
 
 static int setup_listener(struct server_ctrl_config *config)
-{       
+{
 	union sockaddr_any addr = {
 		.sa6 = {
 			.sin6_family    = AF_INET6,
@@ -122,7 +122,7 @@ static int setup_listener(struct server_ctrl_config *config)
 	int sd;
 
 	sd = socket(PF_INET6, SOCK_STREAM, IPPROTO_TCP);
-	if (sd < 0) { 
+	if (sd < 0) {
 		ret = -errno;
 		perror("socket");
 		return ret;
@@ -186,7 +186,7 @@ static int ctrl_send_start(struct server_ctrl_config *config)
 		.port		= htons(config->port),
 	};
 	int ret;
-	
+
 	ret = ctrl_send_msg(config->ctrl_sd, &msg, sizeof(msg));
 	if (ret < 0)
 		return -EFAULT;
@@ -257,7 +257,7 @@ static int ctrl_send_end(struct server_ctrl_config *config)
 	int sd = config->ctrl_sd;
 	unsigned int i;
 	int ret;
-	
+
 	ret = ctrl_send_msg(sd, &msg, sizeof(msg));
 	if (ret < 0)
 		return -EFAULT;

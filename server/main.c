@@ -132,12 +132,12 @@ static int server_loop(int sd)
 			perror("accept");
 			return ret;
 		}
-                cpid = fork();  
-                if (cpid < 0) {
-                        perror("fork");
-                        continue;
-                }       
-                if (cpid == 0) { /* child */
+		cpid = fork();
+		if (cpid < 0) {
+			perror("fork");
+			continue;
+		}
+		if (cpid == 0) { /* child */
 			close(sd);
 			ctrl_main(csd);
 			exit(0);

@@ -19,9 +19,9 @@ struct worker_sync client_worker_sync = {
 
 static void cleanup_close(void *_data)
 {
-        struct client_worker_data *data = _data;
+	struct client_worker_data *data = _data;
 
-        close(data->sd);
+	close(data->sd);
 }
 
 int worker_setup(struct client_worker_data *data)
@@ -210,17 +210,17 @@ void *worker_main(void * _data)
 
 int start_client_worker(struct client_worker_data *data)
 {
-        pthread_attr_t attr;
-        int ret;
+	pthread_attr_t attr;
+	int ret;
 
-        ret = pthread_attr_init(&attr);
-        if (ret)
-                return -ret;
-        ret = pthread_attr_setstacksize(&attr, WORKER_STACK_SIZE);
-        if (ret)
-                return -ret;
-        ret = pthread_create(&data->tid, &attr, worker_main, data);
+	ret = pthread_attr_init(&attr);
+	if (ret)
+		return -ret;
+	ret = pthread_attr_setstacksize(&attr, WORKER_STACK_SIZE);
+	if (ret)
+		return -ret;
+	ret = pthread_create(&data->tid, &attr, worker_main, data);
 
-        pthread_attr_destroy(&attr);
-        return -ret;
+	pthread_attr_destroy(&attr);
+	return -ret;
 }

@@ -294,56 +294,56 @@ static int ctrl_initialize(struct client_config *config)
 
 static int alloc_buffers(struct client_config *config)
 {
-        long page_size;
-        int ret;
+	long page_size;
+	int ret;
 
-        page_size = sysconf(_SC_PAGESIZE);
-        if (page_size < 0)
-                return -EFAULT;
-        config->buff_size = ROUND_UP(config->msg_size, page_size);
-        config->buffers_size = config->n_threads * config->buff_size;
+	page_size = sysconf(_SC_PAGESIZE);
+	if (page_size < 0)
+		return -EFAULT;
+	config->buff_size = ROUND_UP(config->msg_size, page_size);
+	config->buffers_size = config->n_threads * config->buff_size;
 
-        config->workers_data = calloc(sizeof(struct client_worker_data),
-                                      config->n_threads);
-        if (!config->workers_data)
-                return -ENOMEM;
+	config->workers_data = calloc(sizeof(struct client_worker_data),
+				      config->n_threads);
+	if (!config->workers_data)
+		return -ENOMEM;
 
 	ret = 0;
-        config->buffers = mmap(NULL, config->buffers_size,
-                               PROT_READ | PROT_WRITE,
-                               MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-        if (config->buffers == MAP_FAILED) {
-                ret = -errno;
-                fprintf(stderr, "failed to allocate buffers\n");
-                free(config->workers_data);
-        }
+	config->buffers = mmap(NULL, config->buffers_size,
+			       PROT_READ | PROT_WRITE,
+			       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	if (config->buffers == MAP_FAILED) {
+		ret = -errno;
+		fprintf(stderr, "failed to allocate buffers\n");
+		free(config->workers_data);
+	}
 
 	return ret;
 }
 
 static int prepare_buffers(struct client_config *config)
 {
-        unsigned int i;
+	unsigned int i;
 
 	memset(config->workers_data, '\0',
 	       config->n_threads * sizeof(struct client_worker_data));
 
-        for (i = 0; i < config->n_threads; i++) {
-                struct client_worker_data *wdata = &config->workers_data[i];
+	for (i = 0; i < config->n_threads; i++) {
+		struct client_worker_data *wdata = &config->workers_data[i];
 
-                wdata->id = i;
-                wdata->buff = config->buffers + i * config->buff_size;
-                wdata->msg_size = config->msg_size;
-                wdata->reply = (config->test_mode == MODE_TCP_RR);
-        }
+		wdata->id = i;
+		wdata->buff = config->buffers + i * config->buff_size;
+		wdata->msg_size = config->msg_size;
+		wdata->reply = (config->test_mode == MODE_TCP_RR);
+	}
 
-        return 0;
+	return 0;
 }
 
 static void free_buffers(struct client_config *config)
 {
-        munmap(config->buffers, config->buffers_size);
-        free(config->workers_data);
+	munmap(config->buffers, config->buffers_size);
+	free(config->workers_data);
 }
 
 static int start_workers(struct client_config *config)
