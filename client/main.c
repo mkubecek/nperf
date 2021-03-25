@@ -360,7 +360,6 @@ static int worker_by_port(struct client_config *config, uint16_t port)
 	for (i = 0; i < config->n_threads; i++)
 		if (config->workers_data[i].client_port == port)
 			return i;
-		else printf("%u != %u\n", config->workers_data[i].client_port, port);
 
 	return -1;
 }
