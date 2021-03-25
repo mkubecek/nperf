@@ -302,11 +302,10 @@ static int alloc_buffers(struct client_config *config)
 		return -EFAULT;
 	config->buff_size = ROUND_UP(config->msg_size, page_size);
 	config->buffers_size = config->n_threads * config->buff_size;
+	config->buffers_size +=
+		ROUND_UP(config->n_threads * sizeof(struct client_worker_data),
+			 page_size);
 
-	config->workers_data = calloc(sizeof(struct client_worker_data),
-				      config->n_threads);
-	if (!config->workers_data)
-		return -ENOMEM;
 
 	ret = 0;
 	config->buffers = mmap(NULL, config->buffers_size,
@@ -317,6 +316,8 @@ static int alloc_buffers(struct client_config *config)
 		fprintf(stderr, "failed to allocate buffers\n");
 		free(config->workers_data);
 	}
+	config->workers_data = (struct client_worker_data *)
+		(config->buffers + config->n_threads * config->buff_size);
 
 	return ret;
 }
@@ -343,7 +344,6 @@ static int prepare_buffers(struct client_config *config)
 static void free_buffers(struct client_config *config)
 {
 	munmap(config->buffers, config->buffers_size);
-	free(config->workers_data);
 }
 
 static int start_workers(struct client_config *config)
