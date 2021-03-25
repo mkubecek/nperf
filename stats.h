@@ -18,8 +18,16 @@ struct xfer_stats {
 	struct xfer_stats_1	tx;
 };
 
+double xfer_stats_result(const struct xfer_stats *client,
+			 const struct xfer_stats *server,
+			 unsigned int test_mode, double elapsed);
 void xfer_stats_raw_header(const char *label);
 void xfer_stats_print_raw(const struct xfer_stats *stats, unsigned int id);
+void xfer_stats_print_thread(const struct xfer_stats *client,
+			     const struct xfer_stats *server, unsigned int id,
+			     unsigned int test_mode, double elapsed);
+void xfer_stats_thread_footer(double sum, double sum_sqr, unsigned int n,
+			      unsigned int test_mode);
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 static inline uint64_t ntoh64(uint64_t x)

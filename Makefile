@@ -7,8 +7,8 @@ LDFLAGS = -pthread
 #LDFLAGS = -pthread -s
 
 SOBJS = server/main.o server/control.o server/worker.o
-COBJS = client/main.o client/worker.o
-UOBJS = common.o stats.o
+COBJS = client/main.o client/worker.o stats.o
+UOBJS = common.o
 OBJS = $(SOBJS) $(COBJS) $(UOBJS)
 
 TARGETS = nperfd nperf
@@ -27,7 +27,7 @@ nperfd: $(SOBJS) $(UOBJS)
 	$(CC) -o $@ $(LDFLAGS) $+
 
 nperf: $(COBJS) $(UOBJS)
-	$(CC) -o $@ $(LDFLAGS) $+
+	$(CC) -o $@ $(LDFLAGS) $+ -lm
 
 clean:
 	rm -f $(TARGETS) *.o *.d */*.o */*.d
