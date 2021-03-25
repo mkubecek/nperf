@@ -57,7 +57,7 @@ static int parse_test_mode(const char *name)
 static int client_init(void)
 {
 	return ignore_signal(SIGPIPE);
-}       
+}
 
 static int parse_cmdline(int argc, char *argv[], struct client_config *config)
 {
@@ -187,7 +187,7 @@ static int ctrl_recv_start(struct client_config *config)
 	return 0;
 }
 
-static int ctrl_connect(struct client_config *config)
+static int ctrl_connect_with_lookup(struct client_config *config)
 {
 	struct addrinfo hints = {
 		.ai_flags	= 0,
@@ -230,9 +230,47 @@ static int ctrl_connect(struct client_config *config)
 			config->server_host);
 		return ret;
 	}
+
 	config->ctrl_sd = sd;
 	memcpy(&server_addr, result->ai_addr,  result->ai_addrlen);
+	return 0;
+}
 
+static int ctrl_connect_fast(struct client_config *config)
+{
+	socklen_t addr_len;
+	int ret, sd;
+
+	sd = socket(server_addr.sa.sa_family, SOCK_STREAM, IPPROTO_TCP);
+	if (sd < 0)
+		return -errno;
+	ret = sockaddr_length(&server_addr);
+	if (ret < 0)
+		goto err;
+	addr_len = ret;
+	ret = connect(sd, &server_addr.sa, addr_len);
+	if (ret < 0) {
+		ret = -errno;
+		goto err;
+	}
+
+	config->ctrl_sd = sd;
+	return 0;
+err:
+	close(sd);
+	return ret;
+}
+
+static int ctrl_initialize(struct client_config *config)
+{
+	int ret;
+
+	if (server_addr.sa.sa_family)
+		ret = ctrl_connect_fast(config);
+	else
+		ret = ctrl_connect_with_lookup(config);
+	if (ret < 0)
+		return ret;
 	ret = ctrl_send_start(config);
 	if (ret < 0)
 		return ret;
@@ -243,10 +281,9 @@ static int ctrl_connect(struct client_config *config)
 	return 0;
 }
 
-static int prepare_buffers(struct client_config *config)
+static int alloc_buffers(struct client_config *config)
 {
         long page_size;
-        unsigned int i;
         int ret;
 
         page_size = sysconf(_SC_PAGESIZE);
@@ -260,14 +297,25 @@ static int prepare_buffers(struct client_config *config)
         if (!config->workers_data)
                 return -ENOMEM;
 
+	ret = 0;
         config->buffers = mmap(NULL, config->buffers_size,
                                PROT_READ | PROT_WRITE,
                                MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
         if (config->buffers == MAP_FAILED) {
                 ret = -errno;
                 fprintf(stderr, "failed to allocate buffers\n");
-                goto err;
+                free(config->workers_data);
         }
+
+	return ret;
+}
+
+static int prepare_buffers(struct client_config *config)
+{
+        unsigned int i;
+
+	memset(config->workers_data, '\0',
+	       config->n_threads * sizeof(struct client_worker_data));
 
         for (i = 0; i < config->n_threads; i++) {
                 struct client_worker_data *wdata = &config->workers_data[i];
@@ -279,12 +327,9 @@ static int prepare_buffers(struct client_config *config)
         }
 
         return 0;
-err:
-        free(config->workers_data);
-        return ret;
 }
 
-static void cleanup_buffers(struct client_config *config)
+static void free_buffers(struct client_config *config)
 {
         munmap(config->buffers, config->buffers_size);
         free(config->workers_data);
@@ -460,6 +505,37 @@ static int collect_stats(struct client_config *config)
 	return 0;
 }
 
+int one_iteration(struct client_config *config)
+{
+	int ret;
+
+	ret = ctrl_initialize(config);
+	if (ret < 0)
+		goto err;
+	ret = prepare_buffers(config);
+	if (ret < 0)
+		goto err_ctrl;
+	ret = start_workers(config);
+	if (ret < 0)
+		goto err_ctrl;
+	ret = connect_workers(config);
+	if (ret < 0)
+		goto err_workers;
+	ret = run_test(config);
+	if (ret < 0)
+		goto err_workers;
+
+	collect_stats(config);
+	return 0;
+
+err_workers:
+	cancel_workers(config);
+err_ctrl:
+	close(config->ctrl_sd);
+err:
+	return 2;
+}
+
 int main(int argc, char *argv[])
 {
 	int ret;
@@ -474,34 +550,18 @@ int main(int argc, char *argv[])
 
 	ret = client_init();
 	if (ret < 0)
-		goto err;
+		return 2;
 	ret = wsync_init(&client_worker_sync);
 	if (ret < 0)
-		goto err;
-	ret = ctrl_connect(&client_config);
+		return 2;
+	ret = alloc_buffers(&client_config);
 	if (ret < 0)
-		goto err;
-	ret = prepare_buffers(&client_config);
-	if (ret < 0)
-		goto err;
-	ret = start_workers(&client_config);
-	if (ret < 0)
-		goto err_cleanup;
-	ret = connect_workers(&client_config);
-	if (ret < 0)
-		goto err_workers;
-	ret = run_test(&client_config);
-	if (ret < 0)
-		goto err_workers;
+		goto out_ws;
 
-	collect_stats(&client_config);
-	cleanup_buffers(&client_config);
-	return 0;
+	ret = one_iteration(&client_config);
 
-err_workers:
-	cancel_workers(&client_config);
-err_cleanup:
-	cleanup_buffers(&client_config);
-err:
-	return 2;
+	free_buffers(&client_config);
+out_ws:
+	wsync_destroy(&client_worker_sync);
+	return (ret < 0) ? 2 : 0;
 }
