@@ -46,10 +46,10 @@ void xfer_stats_print_thread(const struct xfer_stats *stats, double elapsed,
 
 	switch(test_mode) {
 	case MODE_TCP_STREAM:
-		printf("  %15.1lf", stats->tx.bytes / elapsed);
+		printf("  %15.1lf\n", stats->tx.bytes / elapsed);
 		break;
 	case MODE_TCP_RR:
-		printf("  %10.1lf", stats->rx.msgs / elapsed);
+		printf("  %10.1lf\n", stats->rx.msgs / elapsed);
 		break;
 	default:
 		return;

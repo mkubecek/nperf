@@ -368,7 +368,6 @@ static int collect_stats(struct client_config *config)
 			&config->workers_data[i].stats;
 
 		xfer_stats_print_thread(wstats, elapsed, test_mode, i);
-		putchar('\n');
 		xfer_stats_add(&sum_client, wstats);
 	}
 	xfer_stats_print_thread(&sum_client, elapsed, test_mode,
