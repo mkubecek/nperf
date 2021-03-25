@@ -353,14 +353,68 @@ static int run_test(struct client_config *config)
 	return 0;
 }
 
+static int worker_by_port(struct client_config *config, uint16_t port)
+{
+	unsigned int i;
+
+	for (i = 0; i < config->n_threads; i++)
+		if (config->workers_data[i].client_port == port)
+			return i;
+		else printf("%u != %u\n", config->workers_data[i].client_port, port);
+
+	return -1;
+}
+
+static struct xfer_stats *recv_server_stats(struct client_config *config)
+{
+	struct server_thread_info tinfo;
+	struct xfer_stats *server_stats;
+	struct server_end_msg msg;
+	unsigned int i;
+	int ret;
+
+	server_stats = calloc(config->n_threads, sizeof(server_stats[0]));
+	if (!server_stats)
+		return NULL;
+	ret = ctrl_recv_msg(config->ctrl_sd, &msg, sizeof(msg));
+	if (ret < 0 || ntohl(msg.status) ||
+	    ntohl(msg.thread_length) != sizeof(tinfo) ||
+	    ntohl(msg.n_threads) != config->n_threads)
+		goto err;
+
+	for (i = 0; i < config->n_threads; i++) {
+		int local_idx;
+
+		ret = recv_block(config->ctrl_sd, &tinfo, sizeof(tinfo));
+		if (ret < 0)
+			goto err;
+		local_idx = worker_by_port(config, ntohs(tinfo.client_port));
+		if (local_idx < 0)
+			goto err;
+		xfer_stats_ntoh(&tinfo.stats, &server_stats[local_idx]);
+	}
+
+
+	return server_stats;
+err:
+	free(server_stats);
+	fprintf(stderr, "failed to receive server stats\n");
+	return NULL;
+}
+
 static int collect_stats(struct client_config *config)
 {
 	unsigned int test_mode = config->test_mode;
+	struct xfer_stats sum_client, sum_server;
 	double elapsed = config->elapsed;
-	struct xfer_stats sum_client;
+	struct xfer_stats *server_stats;
 	unsigned int i;
 
+	server_stats = recv_server_stats(config);
+	if (!server_stats)
+		return -EFAULT;
 	printf("test time: %.3lf\n\n", elapsed);
+
 	xfer_stats_reset(&sum_client);
 	xfer_stats_thread_header("client", test_mode);
 	for (i = 0; i < config->n_threads; i++) {
@@ -371,6 +425,17 @@ static int collect_stats(struct client_config *config)
 		xfer_stats_add(&sum_client, wstats);
 	}
 	xfer_stats_print_thread(&sum_client, elapsed, test_mode,
+				XFER_STATS_TOTAL);
+	putchar('\n');
+
+	xfer_stats_reset(&sum_server);
+	xfer_stats_thread_header("server", test_mode);
+	for (i = 0; i < config->n_threads; i++) {
+		xfer_stats_print_thread(&server_stats[i], elapsed,
+					test_mode, i);
+		xfer_stats_add(&sum_server, &server_stats[i]);
+	}
+	xfer_stats_print_thread(&sum_server, elapsed, test_mode,
 				XFER_STATS_TOTAL);
 	putchar('\n');
 
