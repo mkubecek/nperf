@@ -113,7 +113,7 @@ struct __common_ctrl_header {
 	uint32_t	version;
 };
 
-int ctrl_send_msg(int sd, const void *buff, unsigned int length)
+int send_block(int sd, const void *buff, unsigned int length)
 {
 	const unsigned char *bp = buff;
 	unsigned int rest = length;
@@ -132,6 +132,34 @@ int ctrl_send_msg(int sd, const void *buff, unsigned int length)
 	}
 
 	return 0;
+}
+
+int recv_block(int sd, void *buff, unsigned int length)
+{
+	unsigned int rest = length;
+	unsigned char *bp = buff;
+	ssize_t chunk;
+
+	while (rest > 0) {
+		chunk = recv(sd, bp, rest, MSG_WAITALL);
+		if (chunk < 0) {
+			if (errno == EINTR)
+				continue;
+			return -errno;
+		}
+		if (!chunk)
+			return -EINVAL;
+
+		bp += chunk;
+		rest -= chunk;
+	}
+
+	return 0;
+}
+
+int ctrl_send_msg(int sd, const void *buff, unsigned int length)
+{
+	return send_block(sd, buff, length);
 }
 
 int ctrl_recv_msg(int sd, void *buff, unsigned int length)

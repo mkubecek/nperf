@@ -76,6 +76,8 @@ int parse_ulong(const char *name, const char *str, unsigned long *val);
 int parse_ulong_range(const char *name, const char *str, unsigned long *val,
 		      unsigned long min_val, unsigned long max_val);
 int ignore_signal(int signum);
+int send_block(int sd, const void *buff, unsigned int length);
+int recv_block(int sd, void *buff, unsigned int length);
 int ctrl_send_msg(int sd, const void *buff, unsigned int length);
 int ctrl_recv_msg(int sd, void *buff, unsigned int length);
 
