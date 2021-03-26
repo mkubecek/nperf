@@ -21,7 +21,48 @@
 
 #define MAX_ITERATIONS INT_MAX
 
-const char *opts = "H:i:l:m:M:p:s:S:t:n";
+enum stats_type {
+	STATS_TOTAL,		/* total over all iterations */
+	STATS_ITER,		/* per iteration results */
+	STATS_THREAD,		/* per thread results for iteration */
+	STATS_RAW,		/* raw thread data */
+};
+
+#define STATS_F_TOTAL		(1 << STATS_TOTAL)
+#define STATS_F_ITER		(1 << STATS_ITER)
+#define STATS_F_THREAD		(1 << STATS_THREAD)
+#define STATS_F_RAW		(1 << STATS_RAW)
+
+#define STATS_F_ALL \
+	(STATS_F_TOTAL | STATS_F_ITER | STATS_F_THREAD | STATS_F_RAW)
+
+enum verb_level {
+	VERB_RESULT,
+	VERB_ITER,
+	VERB_THREAD,
+	VERB_ALL,
+	VERB_RAW,
+
+	__VERB_CNT
+};
+
+static unsigned int verb_levels[] = {
+	[VERB_RESULT]	= STATS_F_TOTAL,
+	[VERB_ITER]	= STATS_F_TOTAL | STATS_F_ITER,
+	[VERB_THREAD]	= STATS_F_TOTAL | STATS_F_ITER | STATS_F_THREAD,
+	[VERB_ALL]	= STATS_F_ALL,
+	[VERB_RAW]	= STATS_F_RAW,
+};
+
+static const char * verb_level_names[] = {
+	[VERB_RESULT]	= "result",
+	[VERB_ITER]	= "iter",
+	[VERB_THREAD]	= "thread",
+	[VERB_ALL]	= "all",
+	[VERB_RAW]	= "raw",
+};
+
+const char *opts = "H:i:l:m:M:p:s:S:t:nv:";
 const struct option long_opts[] = {
 	{ .name = "host",		.has_arg = 1,	.val = 'H' },
 	{ .name = "iterate",		.has_arg = 1,	.val = 'i' },
@@ -33,6 +74,7 @@ const struct option long_opts[] = {
 	{ .name = "sndbuf-size",	.has_arg = 1,	.val = 'S' },
 	{ .name = "test",		.has_arg = 1,	.val = 't' },
 	{ .name = "tcp-nodelay",			.val = 'n' },
+	{ .name = "verbose",		.has_arg = 1,	.val = 'v' },
 	{}
 };
 
@@ -42,11 +84,12 @@ struct client_config client_config = {
 	.test_length	= 10,
 	.n_iter		= 1,
 	.n_threads	= 1,
+	.stats_mask	= UINT_MAX,
 	.tcp_nodelay	= false,
 };
 union sockaddr_any server_addr;
 
-static int name_lookup(const char *name, const char *names[],
+static int name_lookup(const char *name, const char *const names[],
 		       unsigned int names_count)
 {
 	unsigned int i;
@@ -134,6 +177,21 @@ static int parse_cmdline(int argc, char *argv[], struct client_config *config)
 			}
 			config->test_mode = ret;
 			break;
+		case 'v':
+			ret = name_lookup(optarg, verb_level_names, __VERB_CNT);
+			if (ret >= 0) {
+				config->stats_mask = verb_levels[ret];
+				break;
+			}
+			ret = parse_ulong_range("verbosity mask", optarg,
+						&val, 0, INT_MAX);
+			if (ret < 0) {
+				fprintf(stderr, "invalid verbosity '%s'\n",
+					optarg);
+				return -EINVAL;
+			}
+			config->stats_mask = val;
+			break;
 		case '?':
 			return -EINVAL;
 		default:
@@ -154,6 +212,17 @@ static int parse_cmdline(int argc, char *argv[], struct client_config *config)
 			fprintf(stderr, "test mode '%s' not supported yet\n",
 				test_mode_names[config->test_mode]);
 			return -EINVAL;
+		}
+	}
+
+	if (config->stats_mask == UINT_MAX) {
+		if (config->n_iter == 1) {
+			if (config->n_threads == 1)
+				config->stats_mask = verb_levels[VERB_RESULT];
+			else
+				config->stats_mask = verb_levels[VERB_THREAD];
+		} else {
+			config->stats_mask = verb_levels[VERB_ITER];
 		}
 	}
 

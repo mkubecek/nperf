@@ -11,6 +11,7 @@ struct client_config {
 	unsigned int			test_length;
 	unsigned int			n_iter;
 	unsigned int			n_threads;
+	unsigned int			stats_mask;
 	unsigned int			rcvbuf_size;
 	unsigned int			sndbuf_size;
 	unsigned int			msg_size;
