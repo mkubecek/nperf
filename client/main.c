@@ -528,6 +528,8 @@ err:
 
 static int collect_stats(struct client_config *config)
 {
+	bool show_thread = config->stats_mask & STATS_F_THREAD;
+	bool show_raw = config->stats_mask & STATS_F_RAW;
 	unsigned int n_threads = config->n_threads;
 	unsigned int test_mode = config->test_mode;
 	struct xfer_stats sum_client, sum_server;
@@ -540,29 +542,38 @@ static int collect_stats(struct client_config *config)
 	server_stats = recv_server_stats(config);
 	if (!server_stats)
 		return -EFAULT;
-	printf("test time: %.3lf\n\n", elapsed);
+	if (show_thread || show_raw)
+		printf("test time: %.3lf\n\n", elapsed);
 
 	/* raw stats */
 	xfer_stats_reset(&sum_client);
-	xfer_stats_raw_header("client");
+	if (show_raw)
+		xfer_stats_raw_header("client");
 	for (i = 0; i < n_threads; i++) {
 		const struct xfer_stats *wstats =
 			&config->workers_data[i].stats;
 
-		xfer_stats_print_raw(wstats, i);
+		if (show_raw)
+			xfer_stats_print_raw(wstats, i);
 		xfer_stats_add(&sum_client, wstats);
 	}
-	xfer_stats_print_raw(&sum_client, XFER_STATS_TOTAL);
-	putchar('\n');
+	if (show_raw) {
+		xfer_stats_print_raw(&sum_client, XFER_STATS_TOTAL);
+		putchar('\n');
+	}
 
 	xfer_stats_reset(&sum_server);
-	xfer_stats_raw_header("server");
+	if (show_raw)
+		xfer_stats_raw_header("server");
 	for (i = 0; i < n_threads; i++) {
-		xfer_stats_print_raw(&server_stats[i], i);
+		if (show_raw)
+			xfer_stats_print_raw(&server_stats[i], i);
 		xfer_stats_add(&sum_server, &server_stats[i]);
 	}
-	xfer_stats_print_raw(&sum_server, XFER_STATS_TOTAL);
-	putchar('\n');
+	if (show_raw) {
+		xfer_stats_print_raw(&sum_server, XFER_STATS_TOTAL);
+		putchar('\n');
+	}
 
 	/* thread stats */
 	sum_rslt = sum_rslt_sqr = 0.0;
@@ -573,14 +584,18 @@ static int collect_stats(struct client_config *config)
 		sum_rslt += result;
 		sum_rslt_sqr += result * (double)result;
 
-		xfer_stats_print_thread(&config->workers_data[i].stats,
-					&server_stats[i], i, test_mode,
-					elapsed);
+		if (show_thread)
+			xfer_stats_print_thread(&config->workers_data[i].stats,
+						&server_stats[i], i, test_mode,
+						elapsed);
 	}
-	xfer_stats_print_thread(&sum_client, &sum_server, XFER_STATS_TOTAL,
-				test_mode, elapsed);
-	xfer_stats_thread_footer(sum_rslt, sum_rslt_sqr, n_threads, test_mode);
-	putchar('\n');
+	if (show_thread) {
+		xfer_stats_print_thread(&sum_client, &sum_server,
+					XFER_STATS_TOTAL, test_mode, elapsed);
+		xfer_stats_thread_footer(sum_rslt, sum_rslt_sqr, n_threads,
+					 test_mode);
+		putchar('\n');
+	}
 
 	return 0;
 }
@@ -641,7 +656,8 @@ int main(int argc, char *argv[])
 		goto out_ws;
 
 	for (iter = 0; iter < client_config.n_iter; iter++) {
-		printf("iteration %u\n", iter + 1);
+		if (client_config.stats_mask & (STATS_F_THREAD | STATS_F_RAW))
+			printf("iteration %u\n", iter + 1);
 		ret = one_iteration(&client_config);
 		if (ret < 0)
 			break;
