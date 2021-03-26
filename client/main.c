@@ -33,7 +33,6 @@ const struct option long_opts[] = {
 	{ .name = "sndbuf-size",	.has_arg = 1,	.val = 'S' },
 	{ .name = "test",		.has_arg = 1,	.val = 't' },
 	{ .name = "tcp-nodelay",			.val = 'n' },
-	{ .name = "listen-backlog",	.has_arg = 1,	.val = 'l' },
 	{}
 };
 
