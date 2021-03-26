@@ -46,12 +46,13 @@ struct client_config client_config = {
 };
 union sockaddr_any server_addr;
 
-static int parse_test_mode(const char *name)
+static int name_lookup(const char *name, const char *names[],
+		       unsigned int names_count)
 {
 	unsigned int i;
 
-	for (i = 0; i < MODE_COUNT; i++)
-		if (!strcasecmp(name, test_mode_names[i]))
+	for (i = 0; i < names_count; i++)
+		if (!strcasecmp(name, names[i]))
 			return i;
 
 	return -ENOENT;
@@ -126,7 +127,7 @@ static int parse_cmdline(int argc, char *argv[], struct client_config *config)
 			config->sndbuf_size = val;
 			break;
 		case 't':
-			ret = parse_test_mode(optarg);
+			ret = name_lookup(optarg, test_mode_names, MODE_COUNT);
 			if (ret < 0) {
 				fprintf(stderr, "invalid test '%s'\n", optarg);
 				return -EINVAL;
