@@ -91,6 +91,27 @@ struct client_config client_config = {
 };
 union sockaddr_any server_addr;
 
+/* USR1 signal is sent by control thread to all workers when the test interval
+ * is over. No handler is needed but we need to clear SA_RESTART flag so that
+ * long writes or reads are interrupted as quickly as possible.
+ */
+static int client_set_usr1_handler(void)
+{
+	struct sigaction action;
+	int ret;
+
+	ret = sigaction(SIGUSR1, NULL, &action);
+	if (ret < 0)
+		return -errno;
+	action.sa_handler = SIG_IGN;
+	action.sa_flags &= ~(int)SA_RESTART;
+	ret = sigaction(SIGUSR1, &action, NULL);
+	if (ret < 0)
+		return -errno;
+
+	return 0;
+}
+
 static int name_lookup(const char *name, const char *const names[],
 		       unsigned int names_count)
 {
@@ -105,6 +126,11 @@ static int name_lookup(const char *name, const char *const names[],
 
 static int client_init(void)
 {
+	int ret;
+
+	ret = client_set_usr1_handler();
+	if (ret < 0)
+		return ret;
 	return ignore_signal(SIGPIPE);
 }
 
@@ -439,12 +465,16 @@ failed:
 	return -EFAULT;
 }
 
-static void cancel_workers(struct client_config *config)
+static void kill_workers(struct client_config *config)
 {
 	unsigned int i;
 
 	for (i = 0; i < config->n_threads; i++)
-		pthread_cancel(config->workers_data[i].tid);
+		config->workers_data[i].test_finished = 1;
+	for (i = 0; i < config->n_threads; i++)
+		pthread_kill(config->workers_data[i].tid, SIGUSR1);
+	for (i = 0; i < config->n_threads; i++)
+		pthread_join(config->workers_data[i].tid, NULL);
 }
 
 static int connect_workers(struct client_config *config)
@@ -470,7 +500,7 @@ static int run_test(struct client_config *config)
 	ret = wsync_sleep(&client_worker_sync, config->test_length);
 	if (ret < 0)
 		return ret;
-	cancel_workers(&client_config);
+	kill_workers(&client_config);
 	ret = clock_gettime(CLOCK_MONOTONIC, &ts1);
 	if (ret < 0)
 		return -errno;
@@ -627,7 +657,7 @@ int one_iteration(struct client_config *config, double *iter_result)
 	return 0;
 
 err_workers:
-	cancel_workers(config);
+	kill_workers(config);
 err_ctrl:
 	close(config->ctrl_sd);
 err:

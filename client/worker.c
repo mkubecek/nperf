@@ -107,7 +107,7 @@ static int recv_msg(struct client_worker_data *data, bool *eof)
 	ssize_t chunk;
 
 	*eof = false;
-	while (len > 0) {
+	while (len > 0 && !data->test_finished) {
 		chunk = recv(data->sd, p, len, 0);
 		if (chunk < 0) {
 			if (errno == EINTR)
@@ -126,7 +126,8 @@ static int recv_msg(struct client_worker_data *data, bool *eof)
 		data->stats.rx.bytes += chunk;
 	}
 
-	data->stats.rx.msgs++;
+	if (!len)
+		data->stats.rx.msgs++;
 	return 0;
 }
 
@@ -136,7 +137,7 @@ static int send_msg(struct client_worker_data *data)
 	unsigned char *p = data->buff;
 	ssize_t chunk;
 
-	while (len > 0) {
+	while (len > 0 && !data->test_finished) {
 		chunk = send(data->sd, p, len, 0);
 		if (chunk < 0) {
 			if (errno == EINTR)
@@ -151,7 +152,8 @@ static int send_msg(struct client_worker_data *data)
 		data->stats.tx.bytes += chunk;
 	}
 
-	data->stats.tx.msgs++;
+	if (!len)
+		data->stats.tx.msgs++;
 	return 0;
 }
 
@@ -162,12 +164,14 @@ int worker_run_test(struct client_worker_data *data)
 	int ret;
 
 	data->status = 0;
-	while (!eof) {
+	while (!eof && !data->test_finished) {
 		ret = send_msg(data);
 		if (ret < 0) {
 			data->status = -1;
 			break;
 		}
+		if (data->test_finished)
+			break;
 		if (get_reply) {
 			ret = recv_msg(data, &eof);
 			if (ret < 0) {
@@ -175,7 +179,6 @@ int worker_run_test(struct client_worker_data *data)
 				break;
 			}
 		}
-		pthread_testcancel();
 	}
 
 	return 0;
@@ -194,16 +197,15 @@ void *worker_main(void * _data)
 	wsync_wait_for_state(&client_worker_sync, WS_CONNECT);
 	ret = worker_connect(data);
 	if (ret < 0)
-		pthread_exit(NULL);
+		goto out;
 	wsync_inc_counter(&client_worker_sync);
 
 	wsync_wait_for_state(&client_worker_sync, WS_RUN);
 	ret = worker_run_test(data);
-	if (ret < 0)
-		pthread_exit(NULL);
+	if (ret < 0 || data->test_finished)
+		goto out;
 
-	/* we only get here when test fails prematurely */
-	wsync_wait_for_state(&client_worker_sync, WS_FINISHED);
+out:
 	pthread_cleanup_pop(1);
 	return NULL;
 }

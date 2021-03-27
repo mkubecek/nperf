@@ -28,6 +28,7 @@ struct client_worker_data {
 	pthread_t		tid;
 	struct xfer_stats	stats;
 	int			status;
+	int			test_finished;
 } __attribute__ ((__aligned__ (CACHELINE_SIZE)));
 
 extern struct client_worker_data *workers_data;
