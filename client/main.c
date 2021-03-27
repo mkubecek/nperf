@@ -28,6 +28,8 @@ enum stats_type {
 	STATS_RAW,		/* raw thread data */
 };
 
+double *iter_results;
+
 #define STATS_F_TOTAL		(1 << STATS_TOTAL)
 #define STATS_F_ITER		(1 << STATS_ITER)
 #define STATS_F_THREAD		(1 << STATS_THREAD)
@@ -526,7 +528,7 @@ err:
 	return NULL;
 }
 
-static int collect_stats(struct client_config *config)
+static int collect_stats(struct client_config *config, double *iter_result)
 {
 	bool show_thread = config->stats_mask & STATS_F_THREAD;
 	bool show_raw = config->stats_mask & STATS_F_RAW;
@@ -596,11 +598,12 @@ static int collect_stats(struct client_config *config)
 					 test_mode);
 		putchar('\n');
 	}
+	*iter_result = sum_rslt / n_threads;
 
 	return 0;
 }
 
-int one_iteration(struct client_config *config)
+int one_iteration(struct client_config *config, double *iter_result)
 {
 	int ret;
 
@@ -620,7 +623,7 @@ int one_iteration(struct client_config *config)
 	if (ret < 0)
 		goto err_workers;
 
-	collect_stats(config);
+	collect_stats(config, iter_result);
 	return 0;
 
 err_workers:
@@ -631,14 +634,111 @@ err:
 	return 2;
 }
 
+static void print_iter_result(unsigned int iter, double result, double sum,
+			      double sum_sqr,
+			      const struct client_config *config)
+{
+	unsigned int width;
+	const char *unit;
+	unsigned int n;
+	double mdev;
+
+	switch(config->test_mode) {
+	case MODE_TCP_STREAM:
+		unit = "B/s";
+		width = 13;
+		break;
+	case MODE_TCP_RR:
+		unit = "msg/s";
+		width = 9;
+		break;
+	default:
+		return;
+	}
+
+	if (iter == XFER_STATS_TOTAL) {
+		n = config->n_iter;
+		printf("all%*s", (int)(width + strlen(unit) + 3), "");
+	} else {
+		n = iter;
+		printf("%-3u %*.1lf %s,", iter, width, result, unit);
+	}
+
+	mdev = mdev_n(sum, sum_sqr, n);
+
+	printf("  avg %*.1lf %s, mdev %*.1lf %s (%5.1lf%%)",
+	       width, sum / n, unit, width, mdev, unit, 100 * mdev / (sum / n));
+	putchar('\n');
+}
+
+int all_iterations(struct client_config *config)
+{
+	unsigned int n_iter, iter;
+	unsigned int stats_mask;
+	double sum, sum_sqr;
+	int ret = 0;
+
+	stats_mask = config->stats_mask;
+	n_iter = config->n_iter;
+
+	sum = sum_sqr = 0.0;
+	for (iter = 0; iter < n_iter; iter++) {
+		double iter_result;
+
+		if (stats_mask & (STATS_F_THREAD | STATS_F_RAW))
+			printf("iteration %u\n", iter + 1);
+		ret = one_iteration(&client_config, &iter_result);
+		if (ret < 0)
+			break;
+
+		iter_results[iter] = iter_result;
+		sum += iter_result;
+		sum_sqr += iter_result * iter_result;
+		if (stats_mask & STATS_F_ITER) {
+			print_iter_result(iter + 1, iter_result, sum, sum_sqr,
+					  &client_config);
+			if (stats_mask & (STATS_F_THREAD | STATS_F_RAW))
+				putchar('\n');
+		}
+	}
+	if (ret < 0) {
+		fprintf(stderr, "*** Iteration %u failed, quitting. ***\n\n",
+			iter + 1);
+		n_iter = iter;
+		if (!n_iter)
+			return ret;
+	}
+
+	if (n_iter > 1 &&
+	    (stats_mask & STATS_F_ITER) &&
+	    (stats_mask & (STATS_F_THREAD | STATS_F_RAW))) {
+		sum = sum_sqr = 0.0;
+		for (iter = 0; iter < n_iter; iter++) {
+			double result = iter_results[iter];
+
+			sum += result;
+			sum_sqr += result * result;
+			print_iter_result(iter + 1, result, sum, sum_sqr,
+					  &client_config);
+		}
+	}
+	if (stats_mask & STATS_F_TOTAL)
+		print_iter_result(XFER_STATS_TOTAL, 0.0, sum, sum_sqr,
+				  &client_config);
+
+	return ret;
+}
+
 int main(int argc, char *argv[])
 {
-	unsigned int iter;
 	int ret;
 
 	ret = parse_cmdline(argc, argv, &client_config);
 	if (ret < 0)
 		return 1;
+	iter_results = calloc(client_config.n_iter, sizeof(iter_results[0]));
+	if (!iter_results)
+		return 2;
 
 	printf("port: %hu\n", client_config.ctrl_port);
 	printf("rcvbuf_size: %u\n", client_config.rcvbuf_size);
@@ -647,24 +747,19 @@ int main(int argc, char *argv[])
 
 	ret = client_init();
 	if (ret < 0)
-		return 2;
+		goto out_results;
 	ret = wsync_init(&client_worker_sync);
 	if (ret < 0)
-		return 2;
+		goto out_results;
 	ret = alloc_buffers(&client_config);
 	if (ret < 0)
 		goto out_ws;
-
-	for (iter = 0; iter < client_config.n_iter; iter++) {
-		if (client_config.stats_mask & (STATS_F_THREAD | STATS_F_RAW))
-			printf("iteration %u\n", iter + 1);
-		ret = one_iteration(&client_config);
-		if (ret < 0)
-			break;
-	}
+	ret = all_iterations(&client_config);
 
 	free_buffers(&client_config);
 out_ws:
 	wsync_destroy(&client_worker_sync);
+out_results:
+	free(iter_results);
 	return (ret < 0) ? 2 : 0;
 }
