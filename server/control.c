@@ -302,9 +302,9 @@ int ctrl_main(int ctrl_sd)
 		goto out_close;
 	ret = ctrl_send_end(&config);
 
-out_close:
-	close(ctrl_sd);
 out_buffers:
 	cleanup_buffers(&config);
+out_close:
+	close(ctrl_sd);
 	return ret;
 }
