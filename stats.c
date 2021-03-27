@@ -92,8 +92,8 @@ void xfer_stats_print_thread(const struct xfer_stats *client,
 		       client->tx.msgs, client->tx.msgs / elapsed,
 		       client->tx.bytes / elapsed);
 		printf(", received %9" PRIu64 " msgs, %9.1lf msg/s, %13.1lf B/s\n",
-		       server->rx.msgs, server->rx.msgs / elapsed,
-		       server->rx.bytes / elapsed);
+		       client->rx.msgs, client->rx.msgs / elapsed,
+		       client->rx.bytes / elapsed);
 		break;
 	}
 }
