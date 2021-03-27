@@ -29,6 +29,8 @@ void xfer_stats_print_thread(const struct xfer_stats *client,
 void xfer_stats_thread_footer(double sum, double sum_sqr, unsigned int n,
 			      unsigned int test_mode);
 
+double mdev_n(double sum, double sum_sqr, unsigned int n);
+
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 static inline uint64_t ntoh64(uint64_t x)
 {

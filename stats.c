@@ -4,6 +4,11 @@
 #include "stats.h"
 #include "common.h"
 
+double mdev_n(double sum, double sum_sqr, unsigned int n)
+{
+	return sqrt(n * sum_sqr - sum * sum) / n;
+}
+
 double xfer_stats_result(const struct xfer_stats *client,
 			 const struct xfer_stats *server,
 			 unsigned int test_mode, double elapsed)
@@ -61,7 +66,7 @@ void xfer_stats_thread_footer(double sum, double sum_sqr, unsigned int n,
 	}
 
 	avg = sum / n;
-	mdev = sqrt(n * sum_sqr - sum * sum) / n;
+	mdev = mdev_n(sum, sum_sqr, n);
 	printf("thread average %.1lf %s, mdev %.1lf %s (%.1lf%%)\n",
 	       avg, unit, mdev, unit, 100 * mdev / avg);
 }
