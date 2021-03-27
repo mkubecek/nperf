@@ -1,10 +1,8 @@
 SED = sed
-CC = gcc-11
+CC = gcc
 
-CFLAGS = -pthread -Wall -Wextra -ggdb
+CFLAGS = -pthread -Wall -Wextra -g
 LDFLAGS = -pthread
-#CFLAGS = -pthread -O2 -fomit-frame-pointer
-#LDFLAGS = -pthread -s
 
 SOBJS = server/main.o server/control.o server/worker.o
 COBJS = client/main.o client/worker.o stats.o
