@@ -10,7 +10,6 @@
 
 #define CTRL_VERSION 1
 #define DEFAULT_PORT 12543
-#define MAX_THREADS 16384
 
 #define CACHELINE_SIZE 64
 

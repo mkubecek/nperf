@@ -5,6 +5,21 @@
 
 #include "../stats.h"
 
+enum stats_type {
+	STATS_TOTAL,		/* total over all iterations */
+	STATS_ITER,		/* per iteration results */
+	STATS_THREAD,		/* per thread results for iteration */
+	STATS_RAW,		/* raw thread data */
+};
+
+#define STATS_F_TOTAL		(1 << STATS_TOTAL)
+#define STATS_F_ITER		(1 << STATS_ITER)
+#define STATS_F_THREAD		(1 << STATS_THREAD)
+#define STATS_F_RAW		(1 << STATS_RAW)
+
+#define STATS_F_ALL \
+	(STATS_F_TOTAL | STATS_F_ITER | STATS_F_THREAD | STATS_F_RAW)
+
 struct client_config {
 	const char			*server_host;
 	uint16_t			ctrl_port;
