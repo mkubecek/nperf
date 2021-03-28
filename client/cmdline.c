@@ -49,7 +49,7 @@ const struct option long_opts[] = {
 	{ .name = "host",		.has_arg = 1,	.val = 'H' },
 	{ .name = "iterate",		.has_arg = 1,	.val = 'i' },
 	{ .name = "seconds",		.has_arg = 1,	.val = 'l' },
-	{ .name = "msg-length",		.has_arg = 1,	.val = 'm' },
+	{ .name = "msg-size",		.has_arg = 1,	.val = 'm' },
 	{ .name = "threads",		.has_arg = 1,	.val = 'M' },
 	{ .name = "port",		.has_arg = 1,	.val = 'p' },
 	{ .name = "rcvbuf-size",	.has_arg = 1,	.val = 's' },
@@ -83,7 +83,7 @@ static const char *help_text = "\n"
 "      Number of test iterations (default 1).\n"
 "  -l,--seconds <num>\n"
 "      Length of one iteration in seconds.\n"
-"  -m,--msg-length <size>\n"
+"  -m,--msg-size <size>\n"
 "      Message length in bytes (default depends on test).\n"
 "  -M,--threads <num>\n"
 "      Number of threads (parallel connections) to open (default 1).\n"
