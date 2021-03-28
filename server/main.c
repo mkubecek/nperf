@@ -42,14 +42,14 @@ static int parse_cmdline(int argc, char *argv[], struct server_config *config)
 			ret = parse_ulong_range("port", optarg, &val,
 						0, USHRT_MAX);
 			if (ret < 0)
-				return 1;
+				return -EINVAL;
 			config->port = val;
 			break;
 		case '?':
-			return 1;
+			return -EINVAL;
 		default:
 			fprintf(stderr, "unknown option '-%c'\n", c);
-			return 1;
+			return -EINVAL;
 		}
 	}
 
