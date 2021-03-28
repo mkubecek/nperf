@@ -64,6 +64,11 @@ static const char * verb_level_names[] = {
 	[VERB_RAW]	= "raw",
 };
 
+enum {
+	LOPT_EXACT = UCHAR_MAX + 1,
+	LOPT_BINARY,
+};
+
 const char *opts = "H:i:l:m:M:p:s:S:t:nv:";
 const struct option long_opts[] = {
 	{ .name = "host",		.has_arg = 1,	.val = 'H' },
@@ -77,6 +82,8 @@ const struct option long_opts[] = {
 	{ .name = "test",		.has_arg = 1,	.val = 't' },
 	{ .name = "tcp-nodelay",			.val = 'n' },
 	{ .name = "verbose",		.has_arg = 1,	.val = 'v' },
+	{ .name = "binary",				.val = LOPT_BINARY },
+	{ .name = "exact",				.val = LOPT_EXACT },
 	{}
 };
 
@@ -219,6 +226,12 @@ static int parse_cmdline(int argc, char *argv[], struct client_config *config)
 				return -EINVAL;
 			}
 			config->stats_mask = val;
+			break;
+		case LOPT_BINARY:
+			config->print_opts.binary_prefix = true;
+			break;
+		case LOPT_EXACT:
+			config->print_opts.exact = true;
 			break;
 		case '?':
 			return -EINVAL;
