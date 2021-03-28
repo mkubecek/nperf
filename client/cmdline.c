@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <getopt.h>
+#include <stdlib.h>
 
 #include "cmdline.h"
 #include "main.h"
@@ -42,8 +43,9 @@ enum {
 	LOPT_BINARY,
 };
 
-const char *opts = "H:i:l:m:M:p:s:S:t:nv:";
+const char *opts = "hH:i:l:m:M:p:s:S:t:nv:";
 const struct option long_opts[] = {
+	{ .name = "help",				.val = 'h' },
 	{ .name = "host",		.has_arg = 1,	.val = 'H' },
 	{ .name = "iterate",		.has_arg = 1,	.val = 'i' },
 	{ .name = "seconds",		.has_arg = 1,	.val = 'l' },
@@ -59,6 +61,70 @@ const struct option long_opts[] = {
 	{ .name = "exact",				.val = LOPT_EXACT },
 	{}
 };
+
+static const char *help_text = "\n"
+"  nperf [ options ]\n"
+"\n"
+"  Network performance benchmarking utility (client side). Runs requested\n"
+"  test against a server running an instance of nperfd and displays result\n"
+"  of the test.\n"
+"\n"
+"  *IMPORTANT NOTE:* This utility is still in its initial development stage\n"
+"  so that command line options may change in the future and client and\n"
+"  server built from different source snapshots are not guaranteed to work\n"
+"  together correctly.\n"
+"\n"
+"Options:\n"
+"  -h,--help\n"
+"      Display this help text.\n"
+"  -H,--host <host>\n"
+"      Server to run test against (hostname, IPv4 or IPv6 address).\n"
+"  -i,--iterate <num>\n"
+"      Number of test iterations (default 1).\n"
+"  -l,--seconds <num>\n"
+"      Length of one iteration in seconds.\n"
+"  -m,--msg-length <size>\n"
+"      Message length in bytes (default depends on test).\n"
+"  -M,--threads <num>\n"
+"      Number of threads (parallel connections) to open (default 1).\n"
+"  -p,--port <port>\n"
+"      Server port to connect to (default 12543).\n"
+"  -s,--rcvbuf-size <size>\n"
+"      Receive buffer size (SO_RCVBUF socket option).\n"
+"  -S,--sndbuf-size\n"
+"      Send buffer size (SO_SNDBUF socket option).\n"
+"  -t,--test\n"
+"      Test mode (see below, default TCP_STREAM).\n"
+"  -n,--tcp-nodelay\n"
+"      Set TCP_NODELAY socket option on test connections.\n"
+"  -v,--verbose { result | iter | thread | all | raw }\n"
+"      Output verbosity level (see below).\n"
+"  -v,--verbose <num>\n"
+"      Numeric mask of output to display (see below).\n"
+"  --binary\n"
+"      Power of 2 multiples for human readable output (default power of 10)\n"
+"  --exact  \n"
+"      Show unsimplified (exact) values in results (default human readable)\n"
+"\n"
+"Test types:\n"
+"  TCP_STREAM  client sends data to server as fast as possible, no replies\n"
+"              default message size is 1MB\n"
+"  TCP_RR      client sends one message, server replies with one message, ...\n"
+"              default message size is 1B\n"
+"\n"
+"Verbosity mask bits:\n"
+"  1   Overall result (one line, average over all iterations).\n"
+"  2   One line summary of each iteration.\n"
+"  4   Per thread summary of each iteration (one line per thread).\n"
+"  8   Raw counter values (Rx/Tx, messages/syscalls/bytes, client/server).\n"
+"\n"
+"Verbosity levels:\n"
+"  result  Overall result only (1).\n"
+"  iter    ... + iteration summary (3).\n"
+"  thread  ... + per thread summary (7).\n"
+"  all     ... + raw counter data (15).\n"
+"  raw     Raw data only (8).\n"
+"\n";
 
 static int name_lookup(const char *name, const char *const names[],
 		       unsigned int names_count)
@@ -80,6 +146,9 @@ int parse_cmdline(int argc, char *argv[], struct client_config *config)
 
 	while ((c = getopt_long(argc, argv, opts, long_opts, NULL)) != -1) {
 		switch(c) {
+		case 'h':
+			fputs(help_text, stdout);
+			exit(0);
 		case 'H':
 			config->server_host = optarg;
 			break;
@@ -165,6 +234,8 @@ int parse_cmdline(int argc, char *argv[], struct client_config *config)
 			config->print_opts.exact = true;
 			break;
 		case '?':
+			fputs("\nUsage:", stdout);
+			fputs(help_text, stdout);
 			return -EINVAL;
 		default:
 			fprintf(stderr, "unknown option '-%c'\n", c);
