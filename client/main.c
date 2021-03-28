@@ -254,6 +254,8 @@ static int parse_cmdline(int argc, char *argv[], struct client_config *config)
 		}
 	}
 
+	print_opts_setup(&config->print_opts, config->test_mode);
+
 	return 0;
 }
 
@@ -619,13 +621,14 @@ static int collect_stats(struct client_config *config, double *iter_result)
 		if (show_thread)
 			xfer_stats_print_thread(&config->workers_data[i].stats,
 						&server_stats[i], i, test_mode,
-						elapsed);
+						elapsed, &config->print_opts);
 	}
 	if (show_thread) {
 		xfer_stats_print_thread(&sum_client, &sum_server,
-					XFER_STATS_TOTAL, test_mode, elapsed);
+					XFER_STATS_TOTAL, test_mode, elapsed,
+					&config->print_opts);
 		xfer_stats_thread_footer(sum_rslt, sum_rslt_sqr, n_threads,
-					 test_mode);
+					 &config->print_opts);
 		putchar('\n');
 	}
 	*iter_result = sum_rslt;
@@ -664,43 +667,6 @@ err:
 	return 2;
 }
 
-static void print_iter_result(unsigned int iter, double result, double sum,
-			      double sum_sqr,
-			      const struct client_config *config)
-{
-	unsigned int width;
-	const char *unit;
-	unsigned int n;
-	double mdev;
-
-	switch(config->test_mode) {
-	case MODE_TCP_STREAM:
-		unit = "B/s";
-		width = 13;
-		break;
-	case MODE_TCP_RR:
-		unit = "msg/s";
-		width = 9;
-		break;
-	default:
-		return;
-	}
-
-	if (iter == XFER_STATS_TOTAL) {
-		n = config->n_iter;
-		printf("all%*s", (int)(width + strlen(unit) + 3), "");
-	} else {
-		n = iter;
-		printf("%-3u %*.1lf %s,", iter, width, result, unit);
-	}
-
-	mdev = mdev_n(sum, sum_sqr, n);
-
-	printf("  avg %*.1lf %s, mdev %*.1lf %s (%5.1lf%%)",
-	       width, sum / n, unit, width, mdev, unit, 100 * mdev / (sum / n));
-	putchar('\n');
-}
-
 int all_iterations(struct client_config *config)
 {
 	unsigned int n_iter, iter;
@@ -725,8 +691,8 @@ int all_iterations(struct client_config *config)
 		sum += iter_result;
 		sum_sqr += iter_result * iter_result;
 		if (stats_mask & STATS_F_ITER) {
-			print_iter_result(iter + 1, iter_result, sum, sum_sqr,
-					  &client_config);
+			print_iter_result(iter + 1, config->n_iter, iter_result,
+					  sum, sum_sqr, &config->print_opts);
 			if (stats_mask & (STATS_F_THREAD | STATS_F_RAW))
 				putchar('\n');
 		}
@@ -748,13 +714,13 @@ int all_iterations(struct client_config *config)
 
 			sum += result;
 			sum_sqr += result * result;
-			print_iter_result(iter + 1, result, sum, sum_sqr,
-					  &client_config);
+			print_iter_result(iter + 1, config->n_iter, result, sum,
+					  sum_sqr, &config->print_opts);
 		}
 	}
 	if (stats_mask & STATS_F_TOTAL)
-		print_iter_result(XFER_STATS_TOTAL, 0.0, sum, sum_sqr,
-				  &client_config);
+		print_iter_result(XFER_STATS_TOTAL, config->n_iter, 0.0,
+				  sum, sum_sqr, &config->print_opts);
 
 	return ret;
 }

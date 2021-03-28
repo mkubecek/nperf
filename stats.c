@@ -4,9 +4,77 @@
 #include "stats.h"
 #include "common.h"
 
+static const char *unit_names[] = {
+	[PRINT_UNIT_BYTE]	= "B",
+	[PRINT_UNIT_TRANS]	= "tr",
+};
+
 double mdev_n(double sum, double sum_sqr, unsigned int n)
 {
 	return sqrt(n * sum_sqr - sum * sum) / n;
+}
+
+void print_opts_setup(struct print_options *opts, unsigned int test_mode)
+{
+	switch(test_mode) {
+	case MODE_TCP_STREAM:
+		opts->unit = PRINT_UNIT_BYTE;
+		opts->width = 13;
+		break;
+	case MODE_TCP_RR:
+		opts->unit = PRINT_UNIT_TRANS;
+		opts->width = 9;
+		break;
+	default:
+		break;
+	}
+}
+
+void print_count(uint64_t val, const struct print_options *opts)
+{
+	unsigned int base = opts->binary_prefix ? 1024 : 1000;
+	const char *unit_str = unit_names[opts->unit];
+	const char prefixes[] = " KMGT";
+	const char *prefix = &prefixes[0];
+	double dval;
+
+	if (opts->exact) {
+		printf("%*" PRIu64 " %s", opts->width, val, unit_str);
+		return;
+	}
+	if (val < 20 * base) {
+		printf("%5" PRIu64 "    %s", val, unit_str);
+		return;
+	}
+
+	dval = val / base;
+	prefix++;
+	while ((dval >= 20 * base) && *prefix) {
+		dval /= base;
+		prefix++;
+	}
+	printf("%7.1lf %c%s", dval, *prefix, unit_str);
+
+}
+
+void print_rate(double val, const struct print_options *opts)
+{
+	unsigned int base = opts->binary_prefix ? 1024 : 1000;
+	const char *unit_str = unit_names[opts->unit];
+	const char prefixes[] = " KMGT";
+	const char *prefix = &prefixes[0];
+
+	if (opts->exact) {
+		printf("%*.1lf %s/s", opts->width, val, unit_str);
+		return;
+	}
+
+	while (val >= 20000 && *prefix) {
+		val /= base;
+		prefix++;
+	}
+	printf("%7.1lf %c%s/s", val, *prefix, unit_str);
+
 }
 
 double xfer_stats_result(const struct xfer_stats *client,
@@ -49,32 +117,26 @@ void xfer_stats_print_raw(const struct xfer_stats *stats, unsigned int id)
 }
 
 void xfer_stats_thread_footer(double sum, double sum_sqr, unsigned int n,
-			      unsigned int test_mode)
+			      const struct print_options *opts)
 {
-	const char *unit;
 	double avg, mdev;
-
-	switch(test_mode) {
-	case MODE_TCP_STREAM:
-		unit = "B/s";
-		break;
-	case MODE_TCP_RR:
-		unit = "msg/s";
-		break;
-	default:
-		return;
-	}
 
 	avg = sum / n;
 	mdev = mdev_n(sum, sum_sqr, n);
-	printf("thread average %.1lf %s, mdev %.1lf %s (%.1lf%%)\n",
-	       avg, unit, mdev, unit, 100 * mdev / avg);
+	fputs("thread average ", stdout);
+	print_rate(avg, opts);
+	fputs(", mdev ", stdout);
+	print_rate(mdev, opts);
+	printf(" (%.1lf%%)\n", 100 * mdev / avg);
 }
 
 void xfer_stats_print_thread(const struct xfer_stats *client,
 			     const struct xfer_stats *server, unsigned int id,
-			     unsigned int test_mode, double elapsed)
+			     unsigned int test_mode, double elapsed,
+			     const struct print_options *opts)
 {
+	struct print_options byte_opts = *opts;
+
 	if (id == XFER_STATS_TOTAL)
 		fputs("total     ", stdout);
 	else
@@ -82,18 +144,63 @@ void xfer_stats_print_thread(const struct xfer_stats *client,
 
 	switch (test_mode) {
 	case MODE_TCP_STREAM:
-		printf(" sent %13" PRIu64 " B, rate %13.1lf B/s",
-		       client->tx.bytes, client->tx.bytes / elapsed);
-		printf(", received %13" PRIu64 "B, rate %13.1lf B/s\n",
-		       server->rx.bytes, server->rx.bytes / elapsed);
+		fputs(" sent ", stdout);
+		print_count(client->tx.bytes, opts);
+		fputs(", rate ", stdout);
+		print_rate(client->tx.bytes / elapsed, opts);
+		fputs(", received ", stdout);
+		print_count(server->rx.bytes, opts);
+		fputs(", rate ", stdout);
+		print_rate(server->rx.bytes / elapsed, opts);
+		putchar('\n');
 		break;
 	case MODE_TCP_RR:
-		printf(" sent %9" PRIu64 " msgs, %9.1lf msg/s, %13.1lf B/s",
-		       client->tx.msgs, client->tx.msgs / elapsed,
-		       client->tx.bytes / elapsed);
-		printf(", received %9" PRIu64 " msgs, %9.1lf msg/s, %13.1lf B/s\n",
-		       client->rx.msgs, client->rx.msgs / elapsed,
-		       client->rx.bytes / elapsed);
+		print_opts_setup(&byte_opts, MODE_TCP_STREAM);
+		fputs(" sent ", stdout);
+		print_count(client->tx.msgs, opts);
+		fputs(", rate ", stdout);
+		print_rate(client->tx.msgs / elapsed, opts);
+		fputs(", ", stdout);
+		print_rate(client->tx.bytes / elapsed, &byte_opts);
+
+		print_opts_setup(&byte_opts, MODE_TCP_STREAM);
+		fputs(", received ", stdout);
+		print_count(client->rx.msgs, opts);
+		fputs(", rate ", stdout);
+		print_rate(client->rx.msgs / elapsed, opts);
+		fputs(", ", stdout);
+		print_rate(client->rx.bytes / elapsed, &byte_opts);
+		putchar('\n');
 		break;
 	}
+}
+
+void print_iter_result(unsigned int iter, unsigned int n_iter, double result,
+		       double sum, double sum_sqr,
+		       const struct print_options *opts)
+{
+        double avg, mdev;
+	unsigned int n;
+	int width;
+
+        if (iter == XFER_STATS_TOTAL) {
+                n = n_iter;
+		width = opts->exact ? opts->width : 8;
+		width += strlen(unit_names[opts->unit]);
+                printf("all%*s", width + 5, "");
+        } else {
+                n = iter;
+                printf("%-3u ", iter);
+		print_rate(result, opts);
+		putchar(',');
+        }
+
+	avg = sum / n;
+        mdev = mdev_n(sum, sum_sqr, n);
+
+	fputs("  avg ", stdout);
+	print_rate(avg, opts);
+	fputs(", mdev ", stdout);
+	print_rate(mdev, opts);
+	printf(" (%5.1lf%%)\n", 100.0 * mdev / avg);
 }

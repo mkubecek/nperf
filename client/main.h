@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "../stats.h"
+
 struct client_config {
 	const char			*server_host;
 	uint16_t			ctrl_port;
@@ -16,6 +18,7 @@ struct client_config {
 	unsigned int			sndbuf_size;
 	unsigned int			msg_size;
 	bool				tcp_nodelay;
+	struct print_options		print_opts;
 	int				ctrl_sd;
 	unsigned char			*buffers;
 	unsigned long			buff_size;

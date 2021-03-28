@@ -2,10 +2,23 @@
 #define _NPERF_STATS_H
 
 #include <inttypes.h>
+#include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
 
 #define XFER_STATS_TOTAL ((unsigned int)(-1))
+
+enum print_unit {
+	PRINT_UNIT_BYTE,
+	PRINT_UNIT_TRANS,
+};
+
+struct print_options {
+	enum print_unit	unit;
+	unsigned int	width;
+	bool		exact;
+	bool		binary_prefix;
+};
 
 struct xfer_stats_1 {
 	uint64_t	msgs;
@@ -18,6 +31,7 @@ struct xfer_stats {
 	struct xfer_stats_1	tx;
 };
 
+void print_opts_setup(struct print_options *opts, unsigned int test_mode);
 double xfer_stats_result(const struct xfer_stats *client,
 			 const struct xfer_stats *server,
 			 unsigned int test_mode, double elapsed);
@@ -25,9 +39,13 @@ void xfer_stats_raw_header(const char *label);
 void xfer_stats_print_raw(const struct xfer_stats *stats, unsigned int id);
 void xfer_stats_print_thread(const struct xfer_stats *client,
 			     const struct xfer_stats *server, unsigned int id,
-			     unsigned int test_mode, double elapsed);
+			     unsigned int test_mode, double elapsed,
+			     const struct print_options *opts);
 void xfer_stats_thread_footer(double sum, double sum_sqr, unsigned int n,
-			      unsigned int test_mode);
+			      const struct print_options *opts);
+void print_iter_result(unsigned int iter, unsigned int n_iter, double result,
+		       double sum, double sum_sqr,
+		       const struct print_options *opts);
 
 double mdev_n(double sum, double sum_sqr, unsigned int n);
 
