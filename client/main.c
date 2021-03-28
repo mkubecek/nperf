@@ -628,7 +628,7 @@ static int collect_stats(struct client_config *config, double *iter_result)
 					 test_mode);
 		putchar('\n');
 	}
-	*iter_result = sum_rslt / n_threads;
+	*iter_result = sum_rslt;
 
 	return 0;
 }
