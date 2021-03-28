@@ -541,9 +541,14 @@ int main(int argc, char *argv[])
 	if (!iter_results)
 		return 2;
 
-	printf("port: %hu\n", client_config.ctrl_port);
-	printf("rcvbuf_size: %u\n", client_config.rcvbuf_size);
-	printf("sndbuf_size: %u\n", client_config.sndbuf_size);
+	printf("server: %s, port %hu\n", client_config.server_host,
+	       client_config.ctrl_port);
+	printf("iterations: %u, threads: %u, test length: %u\n",
+	       client_config.n_iter, client_config.n_threads,
+	       client_config.test_length);
+	printf("test: %s, message size: %u\n",
+	       test_mode_names[client_config.test_mode],
+	       client_config.msg_size);
 	putchar('\n');
 
 	ret = client_init();
