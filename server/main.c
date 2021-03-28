@@ -16,8 +16,9 @@
 #include "../common.h"
 #include "control.h"
 
-const char *opts = "p:";
+const char *opts = "hp:";
 const struct option long_opts[] = {
+	{ .name = "help",				.val = 'h' },
 	{ .name = "port",		.has_arg = 1,	.val = 'p' },
 	{}
 };
@@ -30,6 +31,26 @@ static struct server_config server_config = {
 	.port		= DEFAULT_PORT,
 };
 
+static const char *help_text = "\n"
+"  nperfd [ options ]\n"
+"\n"
+"  Network performance benchmarking utility (server side). Listens on given\n"
+"  TCP port and provides server for tests initiated by client (nperf).\n"
+"  For each client connection, nperfd starts a new listener on an ephemeral\n"
+"  port which is then used by client data connections (the benchmark).\n"
+"\n"
+"  *IMPORTANT NOTE:* This utility is still in its initial development stage\n"
+"  so that command line options may change in the future and client and\n"
+"  server built from different source snapshots are not guaranteed to work\n"
+"  together correctly.\n"
+"\n"
+"Options:\n"
+"  -h,--help\n"
+"      Display this help text.\n"
+"  -p,--port <port>\n"
+"      Server port to listen on (default 12543).\n"
+"\n";
+
 static int parse_cmdline(int argc, char *argv[], struct server_config *config)
 {
 	unsigned long val;
@@ -38,6 +59,9 @@ static int parse_cmdline(int argc, char *argv[], struct server_config *config)
 
 	while ((c = getopt_long(argc, argv, opts, long_opts, NULL)) != -1) {
 		switch(c) {
+                case 'h':
+                        fputs(help_text, stdout);
+                        exit(0);
 		case 'p':
 			ret = parse_ulong_range("port", optarg, &val,
 						0, USHRT_MAX);
@@ -46,6 +70,8 @@ static int parse_cmdline(int argc, char *argv[], struct server_config *config)
 			config->port = val;
 			break;
 		case '?':
+			fputs("\nUsage:", stdout);
+			fputs(help_text, stdout);
 			return -EINVAL;
 		default:
 			fprintf(stderr, "unknown option '-%c'\n", c);
