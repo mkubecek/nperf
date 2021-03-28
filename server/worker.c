@@ -82,7 +82,7 @@ static void *worker_main(void *_data)
 
 	while (!eof) {
 		ret = recv_msg(data, &eof);
-		if (ret < 0)
+		if (ret < 0 || eof)
 			break;
 		if (do_write) {
 			ret = send_msg(data);
