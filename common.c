@@ -11,8 +11,6 @@ const char *const test_mode_names[MODE_COUNT] =
 {
 	[MODE_TCP_STREAM]	= "TCP_STREAM",
 	[MODE_TCP_RR]		= "TCP_RR",
-	[MODE_UDP_STREAM]	= "UDP_STREAM",
-	[MODE_UDP_RR]		= "UDP_RR",
 };
 
 int parse_ulong(const char *name, const char *str, unsigned long *val)

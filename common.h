@@ -25,8 +25,6 @@ union sockaddr_any {
 enum test_mode {
 	MODE_TCP_STREAM,
 	MODE_TCP_RR,
-	MODE_UDP_STREAM,
-	MODE_UDP_RR,
 
 	MODE_COUNT
 };
