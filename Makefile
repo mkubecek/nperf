@@ -5,7 +5,7 @@ CFLAGS = -pthread -Wall -Wextra -g
 LDFLAGS = -pthread
 
 SOBJS = server/main.o server/control.o server/worker.o
-COBJS = client/main.o client/worker.o client/cmdline.o stats.o
+COBJS = client/main.o client/worker.o client/cmdline.o stats.o estimate.o
 UOBJS = common.o
 OBJS = $(SOBJS) $(COBJS) $(UOBJS)
 

@@ -3,6 +3,7 @@
 
 #include "stats.h"
 #include "common.h"
+#include "estimate.h"
 
 static const char *unit_names[] = {
 	[PRINT_UNIT_BYTE]	= "B",
@@ -179,7 +180,7 @@ void print_iter_result(unsigned int iter, unsigned int n_iter, double result,
 		       double sum, double sum_sqr,
 		       const struct print_options *opts)
 {
-        double avg, mdev;
+        double avg, mdev, confid;
 	unsigned int n;
 	int width;
 
@@ -197,10 +198,18 @@ void print_iter_result(unsigned int iter, unsigned int n_iter, double result,
 
 	avg = sum / n;
         mdev = mdev_n(sum, sum_sqr, n);
+	if (n > 1)
+		confid = confid_interval(sum, sum_sqr, n, CONFID_LEVEL_95);
 
 	fputs("  avg ", stdout);
 	print_rate(avg, opts);
 	fputs(", mdev ", stdout);
 	print_rate(mdev, opts);
-	printf(" (%5.1lf%%)\n", 100.0 * mdev / avg);
+	printf(" (%5.1lf%%)", 100.0 * mdev / avg);
+	if (n > 1) {
+		fputs(", confid. +/- ", stdout);
+		print_rate(confid, opts);
+		printf(" (%5.1lf%%)", 100.0 * confid / avg);
+	}
+	putchar('\n');
 }
