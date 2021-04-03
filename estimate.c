@@ -138,7 +138,7 @@ double sdev_n1(double sum, double sum_sqr, unsigned int n)
  * used, for larger nu, an asymptotic c0 + c1/n + c2/n^2 where c0 is the
  * z value (i.e. limit at infinity).
  */
-static double tval(unsigned int nu, enum conf_level level)
+static double tval(unsigned int nu, enum confid_level level)
 {
 	if (nu < sizeof(crit_values) / sizeof(crit_values[0]))
 		return crit_values[nu][level];
@@ -149,7 +149,7 @@ static double tval(unsigned int nu, enum conf_level level)
 
 /* half width of the confidence interfal */
 double confid_interval(double sum, double sum_sqr, unsigned int n,
-		       enum conf_level level)
+		       enum confid_level level)
 {
 	return sdev_n1(sum, sum_sqr, n) * tval(n - 1, level) / sqrt(n);
 }
