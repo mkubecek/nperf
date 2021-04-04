@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "../stats.h"
+#include "../estimate.h"
 
 enum stats_type {
 	STATS_TOTAL,		/* total over all iterations */
@@ -28,6 +29,7 @@ struct client_config {
 	unsigned int			test_length;
 	unsigned int			n_iter;
 	unsigned int			n_threads;
+	enum confid_level		confid_level;
 	unsigned int			stats_mask;
 	unsigned int			rcvbuf_size;
 	unsigned int			sndbuf_size;

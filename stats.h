@@ -6,6 +6,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "estimate.h"
+
 #define XFER_STATS_TOTAL ((unsigned int)(-1))
 
 enum print_unit {
@@ -44,7 +46,7 @@ void xfer_stats_print_thread(const struct xfer_stats *client,
 void xfer_stats_thread_footer(double sum, double sum_sqr, unsigned int n,
 			      const struct print_options *opts);
 void print_iter_result(unsigned int iter, unsigned int n_iter, double result,
-		       double sum, double sum_sqr,
+		       double sum, double sum_sqr, enum confid_level level,
 		       const struct print_options *opts);
 
 double mdev_n(double sum, double sum_sqr, unsigned int n);

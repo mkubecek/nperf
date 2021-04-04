@@ -43,11 +43,12 @@ enum {
 	LOPT_BINARY,
 };
 
-const char *opts = "hH:i:l:m:M:p:s:S:t:nv:";
+const char *opts = "hH:i:I:l:m:M:p:s:S:t:nv:";
 const struct option long_opts[] = {
 	{ .name = "help",				.val = 'h' },
 	{ .name = "host",		.has_arg = 1,	.val = 'H' },
 	{ .name = "iterate",		.has_arg = 1,	.val = 'i' },
+	{ .name = "confidence",		.has_arg = 1,	.val = 'I' },
 	{ .name = "seconds",		.has_arg = 1,	.val = 'l' },
 	{ .name = "msg-size",		.has_arg = 1,	.val = 'm' },
 	{ .name = "threads",		.has_arg = 1,	.val = 'M' },
@@ -81,6 +82,8 @@ static const char *help_text = "\n"
 "      Server to run test against (hostname, IPv4 or IPv6 address).\n"
 "  -i,--iterate <num>\n"
 "      Number of test iterations (default 1).\n"
+"  -I,--confidence <num>\n"
+"      Confidence level for displayed confidence intervals (default 95%).\n"
 "  -l,--seconds <num>\n"
 "      Length of one iteration in seconds.\n"
 "  -m,--msg-size <size>\n"
@@ -163,6 +166,23 @@ int parse_cmdline(int argc, char *argv[], struct client_config *config)
 			if (ret < 0)
 				return -EINVAL;
 			config->n_iter = val;
+			break;
+		case 'I':
+			ret = parse_ulong_range("confidence", optarg, &val,
+						0, 100);
+			if (ret < 0)
+				return -EINVAL;
+			switch(val) {
+			case 95:
+				config->confid_level = CONFID_LEVEL_95;
+				break;
+			case 99:
+				config->confid_level = CONFID_LEVEL_99;
+				break;
+			default:
+				fprintf(stderr, "only confidence level 95 or 99 supported\n");
+				return -EINVAL;
+			}
 			break;
 		case 'l':
 			ret = parse_ulong_range("test length", optarg, &val,

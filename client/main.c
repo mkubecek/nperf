@@ -497,7 +497,8 @@ int all_iterations(struct client_config *config)
 		sum_sqr += iter_result * iter_result;
 		if (stats_mask & STATS_F_ITER) {
 			print_iter_result(iter + 1, config->n_iter, iter_result,
-					  sum, sum_sqr, &config->print_opts);
+					  sum, sum_sqr, config->confid_level,
+					  &config->print_opts);
 			if (stats_mask & (STATS_F_THREAD | STATS_F_RAW))
 				putchar('\n');
 		}
@@ -520,12 +521,14 @@ int all_iterations(struct client_config *config)
 			sum += result;
 			sum_sqr += result * result;
 			print_iter_result(iter + 1, config->n_iter, result, sum,
-					  sum_sqr, &config->print_opts);
+					  sum_sqr, config->confid_level,
+					  &config->print_opts);
 		}
 	}
 	if (stats_mask & STATS_F_TOTAL)
 		print_iter_result(XFER_STATS_TOTAL, config->n_iter, 0.0,
-				  sum, sum_sqr, &config->print_opts);
+				  sum, sum_sqr, config->confid_level,
+				  &config->print_opts);
 
 	return ret;
 }

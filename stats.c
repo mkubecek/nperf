@@ -177,7 +177,7 @@ void xfer_stats_print_thread(const struct xfer_stats *client,
 }
 
 void print_iter_result(unsigned int iter, unsigned int n_iter, double result,
-		       double sum, double sum_sqr,
+		       double sum, double sum_sqr, enum confid_level level,
 		       const struct print_options *opts)
 {
         double avg, mdev, confid;
@@ -199,7 +199,7 @@ void print_iter_result(unsigned int iter, unsigned int n_iter, double result,
 	avg = sum / n;
         mdev = mdev_n(sum, sum_sqr, n);
 	if (n > 1)
-		confid = confid_interval(sum, sum_sqr, n, CONFID_LEVEL_95);
+		confid = confid_interval(sum, sum_sqr, n, level);
 
 	fputs("  avg ", stdout);
 	print_rate(avg, opts);
