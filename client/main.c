@@ -372,10 +372,9 @@ static int collect_stats(struct client_config *config, double *iter_result)
 	unsigned int n_threads = config->n_threads;
 	unsigned int test_mode = config->test_mode;
 	struct xfer_stats sum_client, sum_server;
+	double result, sum_rslt, sum_rslt_sqr;
 	double elapsed = config->elapsed;
 	struct xfer_stats *server_stats;
-	double sum_rslt, sum_rslt_sqr;
-	uint64_t result;
 	unsigned int i;
 
 	server_stats = recv_server_stats(config);
