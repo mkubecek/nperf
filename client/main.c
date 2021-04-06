@@ -519,13 +519,13 @@ int all_iterations(struct client_config *config)
 
 			sum += result;
 			sum_sqr += result * result;
-			print_iter_result(iter + 1, config->n_iter, result, sum,
+			print_iter_result(iter + 1, n_iter, result, sum,
 					  sum_sqr, config->confid_level,
 					  &config->print_opts);
 		}
 	}
 	if (stats_mask & STATS_F_TOTAL)
-		print_iter_result(XFER_STATS_TOTAL, config->n_iter, 0.0,
+		print_iter_result(XFER_STATS_TOTAL, n_iter, 0.0,
 				  sum, sum_sqr, config->confid_level,
 				  &config->print_opts);
 
