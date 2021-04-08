@@ -112,6 +112,65 @@ int parse_ulong_range(const char *name, const char *str, unsigned long *val,
 				       NULL);
 }
 
+int parse_double_delim(const char *name, const char *str, double *val,
+		       char delimiter, const char **next)
+{
+	char *eptr;
+
+	if (!*str)
+		goto invalid;
+	*val = strtod(str, &eptr);
+
+	if (*eptr) {
+	       if (*eptr != delimiter)
+		       goto invalid;
+	}
+
+	if (next)
+		*next = eptr;
+	return 0;
+
+invalid:
+	fprintf(stderr, "invalid value '%s' of %s\n", str, name);
+	return -EINVAL;
+}
+
+int parse_double(const char *name, const char *str, double *val)
+{
+	return parse_double_delim(name, str, val, '\0', NULL);
+}
+
+int parse_double_range_delim(const char *name, const char *str,
+			     double *val, double min_val,
+			     double max_val, char delimiter,
+			     const char **next)
+{
+	int ret;
+
+	ret = parse_double_delim(name, str, val, delimiter, next);
+	if (ret < 0)
+		return ret;
+	if (*val < min_val) {
+		fprintf(stderr, "value '%s' of %s is lower than %g\n",
+			str, name, min_val);
+		return -EINVAL;
+	}
+	if (*val > max_val) {
+		fprintf(stderr, "value '%s' of %s is higher than %g\n",
+			str, name, max_val);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+int parse_double_range(const char *name, const char *str, double *val,
+		       double min_val, double max_val)
+{
+	return parse_double_range_delim(name, str, val, min_val, max_val, '\0',
+					NULL);
+}
+
 int ignore_signal(int signum)
 {
 	struct sigaction action;
