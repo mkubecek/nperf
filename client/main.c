@@ -475,6 +475,7 @@ int all_iterations(struct client_config *config)
 {
 	unsigned int n_iter, iter;
 	unsigned int stats_mask;
+	double confid_ival_hw;
 	double sum, sum_sqr;
 	int ret = 0;
 
@@ -525,6 +526,19 @@ int all_iterations(struct client_config *config)
 					  &config->print_opts);
 		}
 	}
+
+	if (n_iter >= 2)
+		confid_ival_hw = confid_interval(sum, sum_sqr, iter + 1,
+						 config->confid_level) /
+				 (sum / (iter + 1));
+	if (config->confid_target_set &&
+	    ((n_iter < 2) || (200.0 * confid_ival_hw > config->confid_target)))
+		fprintf(stderr,
+			"*** Failed to reach confidence target.\n"
+			"*** Confidence interval width is %.4lg%% (+/- %.4lg%%), requested %.4lg%%.\n"
+			"*** The result is not reliable enough.\n",
+			200.0 * confid_ival_hw, 100.0 * confid_ival_hw,
+			config->confid_target);
 	if (stats_mask & STATS_F_TOTAL)
 		print_iter_result(XFER_STATS_TOTAL, n_iter, 0.0,
 				  sum, sum_sqr, config->confid_level,
