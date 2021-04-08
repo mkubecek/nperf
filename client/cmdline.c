@@ -82,8 +82,9 @@ static const char *help_text = "\n"
 "      Server to run test against (hostname, IPv4 or IPv6 address).\n"
 "  -i,--iterate <num>\n"
 "      Number of test iterations (default 1).\n"
-"  -I,--confidence <num>\n"
+"  -I,--confidence <num>[,<float>]\n"
 "      Confidence level for displayed confidence intervals (default 95%).\n"
+"      Optional second argument is confidence interval width (default 10%).\n"
 "  -l,--seconds <num>\n"
 "      Length of one iteration in seconds.\n"
 "  -m,--msg-size <size>\n"
@@ -149,6 +150,8 @@ static int name_lookup(const char *name, const char *const names[],
 int parse_cmdline(int argc, char *argv[], struct client_config *config)
 {
 	unsigned long val;
+	const char *arg;
+	double dval;
 	int ret;
 	int c;
 
@@ -168,8 +171,8 @@ int parse_cmdline(int argc, char *argv[], struct client_config *config)
 			config->n_iter = val;
 			break;
 		case 'I':
-			ret = parse_ulong_range("confidence", optarg, &val,
-						0, 100);
+			ret = parse_ulong_range_delim("confidence", optarg,
+						      &val, 0, 100, ',', &arg);
 			if (ret < 0)
 				return -EINVAL;
 			ret = confid_level_input(val);
@@ -178,6 +181,14 @@ int parse_cmdline(int argc, char *argv[], struct client_config *config)
 				return -EINVAL;
 			}
 			config->confid_level = ret;
+			if (!*arg)
+				break;
+			ret = parse_double_range("confidence", ++arg, &dval,
+						 1e-6, 100.0);
+			if (ret < 0)
+				return -EINVAL;
+			config->confid_target = dval;
+			config->confid_target_set = true;
 			break;
 		case 'l':
 			ret = parse_ulong_range("test length", optarg, &val,
@@ -261,6 +272,12 @@ int parse_cmdline(int argc, char *argv[], struct client_config *config)
 			fprintf(stderr, "unknown option '-%c'\n", c);
 			return -EINVAL;
 		}
+	}
+
+	if (config->confid_target_set && (config->n_iter < 3)) {
+		fputs("Use of confidence target requires at least 3 iterations (use -i option).\n",
+		      stderr);
+		return -EINVAL;
 	}
 
 	if (!config->msg_size) {

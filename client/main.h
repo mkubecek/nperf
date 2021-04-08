@@ -30,6 +30,8 @@ struct client_config {
 	unsigned int			n_iter;
 	unsigned int			n_threads;
 	enum confid_level		confid_level;
+	double				confid_target;
+	bool				confid_target_set;
 	unsigned int			stats_mask;
 	unsigned int			rcvbuf_size;
 	unsigned int			sndbuf_size;

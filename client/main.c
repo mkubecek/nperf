@@ -549,6 +549,11 @@ int main(int argc, char *argv[])
 	printf("iterations: %u, threads: %u, test length: %u\n",
 	       client_config.n_iter, client_config.n_threads,
 	       client_config.test_length);
+	if (client_config.confid_target_set)
+		printf("confidence target: %.1lf%% (+/- %.1lf%%) at %u%%\n",
+		       client_config.confid_target,
+		       client_config.confid_target / 2,
+		       confid_level_output(client_config.confid_level));
 	printf("test: %s, message size: %u\n",
 	       test_mode_names[client_config.test_mode],
 	       client_config.msg_size);
