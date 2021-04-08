@@ -26,7 +26,8 @@ struct client_config client_config = {
 	.ctrl_port	= DEFAULT_PORT,
 	.test_mode	= MODE_TCP_STREAM,
 	.test_length	= 10,
-	.n_iter		= 1,
+	.min_iter	= 1,
+	.max_iter	= 1,
 	.n_threads	= 1,
 	.stats_mask	= UINT_MAX,
 	.tcp_nodelay	= false,
@@ -473,17 +474,20 @@ err:
 
 int all_iterations(struct client_config *config)
 {
+	double confid_target_hw, confid_ival_hw;
 	unsigned int n_iter, iter;
 	unsigned int stats_mask;
-	double confid_ival_hw;
+	bool confid_target_set;
 	double sum, sum_sqr;
 	int ret = 0;
 
 	stats_mask = config->stats_mask;
-	n_iter = config->n_iter;
+	confid_target_hw = 0.999 * config->confid_target / 200.0;
+	confid_target_set = config->confid_target_set;
 
 	sum = sum_sqr = 0.0;
-	for (iter = 0; iter < n_iter; iter++) {
+	n_iter = 0;
+	for (iter = 0; iter < config->max_iter; iter++) {
 		double iter_result;
 
 		if (stats_mask & (STATS_F_THREAD | STATS_F_RAW))
@@ -491,23 +495,31 @@ int all_iterations(struct client_config *config)
 		ret = one_iteration(&client_config, &iter_result);
 		if (ret < 0)
 			break;
+		n_iter++;
 
 		iter_results[iter] = iter_result;
 		sum += iter_result;
 		sum_sqr += iter_result * iter_result;
+		if (iter > 0)
+			confid_ival_hw = confid_interval(sum, sum_sqr, iter + 1,
+							 config->confid_level) /
+					 (sum / (iter + 1));
 		if (stats_mask & STATS_F_ITER) {
-			print_iter_result(iter + 1, config->n_iter, iter_result,
+			print_iter_result(iter + 1, iter + 1, iter_result,
 					  sum, sum_sqr, config->confid_level,
 					  &config->print_opts);
 			if (stats_mask & (STATS_F_THREAD | STATS_F_RAW))
 				putchar('\n');
 		}
 		fflush(stdout);
+
+		if (confid_target_set && (n_iter >= config->min_iter) &&
+		    (confid_ival_hw <= confid_target_hw))
+			break;
 	}
 	if (ret < 0) {
 		fprintf(stderr, "*** Iteration %u failed, quitting. ***\n\n",
 			iter + 1);
-		n_iter = iter;
 		if (!n_iter)
 			return ret;
 	}
@@ -527,10 +539,6 @@ int all_iterations(struct client_config *config)
 		}
 	}
 
-	if (n_iter >= 2)
-		confid_ival_hw = confid_interval(sum, sum_sqr, iter + 1,
-						 config->confid_level) /
-				 (sum / (iter + 1));
 	if (config->confid_target_set &&
 	    ((n_iter < 2) || (200.0 * confid_ival_hw > config->confid_target)))
 		fprintf(stderr,
@@ -554,15 +562,19 @@ int main(int argc, char *argv[])
 	ret = parse_cmdline(argc, argv, &client_config);
 	if (ret < 0)
 		return 1;
-	iter_results = calloc(client_config.n_iter, sizeof(iter_results[0]));
+	iter_results = calloc(client_config.max_iter, sizeof(iter_results[0]));
 	if (!iter_results)
 		return 2;
 
 	printf("server: %s, port %hu\n", client_config.server_host,
 	       client_config.ctrl_port);
-	printf("iterations: %u, threads: %u, test length: %u\n",
-	       client_config.n_iter, client_config.n_threads,
-	       client_config.test_length);
+	if (client_config.min_iter < client_config.max_iter)
+		printf("iterations: %u-%u", client_config.min_iter,
+		       client_config.max_iter);
+	else
+		printf("iterations: %u", client_config.min_iter);
+	printf(", threads: %u, test length: %u\n",
+	       client_config.n_threads, client_config.test_length);
 	if (client_config.confid_target_set)
 		printf("confidence target: %.1lf%% (+/- %.1lf%%) at %u%%\n",
 		       client_config.confid_target,

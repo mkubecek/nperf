@@ -168,7 +168,7 @@ int parse_cmdline(int argc, char *argv[], struct client_config *config)
 						0, MAX_ITERATIONS);
 			if (ret < 0)
 				return -EINVAL;
-			config->n_iter = val;
+			config->min_iter = config->max_iter = val;
 			break;
 		case 'I':
 			ret = parse_ulong_range_delim("confidence", optarg,
@@ -274,7 +274,7 @@ int parse_cmdline(int argc, char *argv[], struct client_config *config)
 		}
 	}
 
-	if (config->confid_target_set && (config->n_iter < 3)) {
+	if (config->confid_target_set && (config->min_iter < 3)) {
 		fputs("Use of confidence target requires at least 3 iterations (use -i option).\n",
 		      stderr);
 		return -EINVAL;
@@ -296,7 +296,7 @@ int parse_cmdline(int argc, char *argv[], struct client_config *config)
 	}
 
 	if (config->stats_mask == UINT_MAX) {
-		if (config->n_iter == 1) {
+		if (config->max_iter == 1) {
 			if (config->n_threads == 1)
 				config->stats_mask = verb_levels[VERB_RESULT];
 			else
