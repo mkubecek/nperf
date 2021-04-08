@@ -501,6 +501,7 @@ int all_iterations(struct client_config *config)
 			if (stats_mask & (STATS_F_THREAD | STATS_F_RAW))
 				putchar('\n');
 		}
+		fflush(stdout);
 	}
 	if (ret < 0) {
 		fprintf(stderr, "*** Iteration %u failed, quitting. ***\n\n",
