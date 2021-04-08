@@ -172,17 +172,12 @@ int parse_cmdline(int argc, char *argv[], struct client_config *config)
 						0, 100);
 			if (ret < 0)
 				return -EINVAL;
-			switch(val) {
-			case 95:
-				config->confid_level = CONFID_LEVEL_95;
-				break;
-			case 99:
-				config->confid_level = CONFID_LEVEL_99;
-				break;
-			default:
-				fprintf(stderr, "only confidence level 95 or 99 supported\n");
+			ret = confid_level_input(val);
+			if (ret < 0) {
+				fprintf(stderr, "only confidence level 95 or 99 are supported\n");
 				return -EINVAL;
 			}
+			config->confid_level = ret;
 			break;
 		case 'l':
 			ret = parse_ulong_range("test length", optarg, &val,
