@@ -13,16 +13,19 @@ const char *const test_mode_names[MODE_COUNT] =
 	[MODE_TCP_RR]		= "TCP_RR",
 };
 
-int parse_ulong(const char *name, const char *str, unsigned long *val)
+int parse_ulong_delim(const char *name, const char *str, unsigned long *val,
+		      char delimiter, const char **next)
 {
 	unsigned long factor = 1;
 	char *eptr;
+	char c;
 
 	if (!*str)
 		goto invalid;
 	*val = strtoul(str, &eptr, 10);
 
-	switch(*eptr++) {
+	c = *eptr++;
+	switch(c) {
 	case '\0':
 		eptr--;
 		break;
@@ -51,16 +54,21 @@ int parse_ulong(const char *name, const char *str, unsigned long *val)
 		factor = 1UL << 40;
 		break;
 	default:
-		goto invalid;
+		eptr--;
+		break;
 	}
-	if (*eptr)
-		goto invalid;
+	if (*eptr) {
+	       if (*eptr != delimiter)
+		       goto invalid;
+	}
 
 	if (*val > ULONG_MAX / factor) {
 		fprintf(stderr, "value '%s' of %s too large\n", str, name);
 		return -EINVAL;
 	}
 	*val *= factor;
+	if (next)
+		*next = eptr;
 	return 0;
 
 invalid:
@@ -68,12 +76,19 @@ invalid:
 	return -EINVAL;
 }
 
-int parse_ulong_range(const char *name, const char *str, unsigned long *val,
-		      unsigned long min_val, unsigned long max_val)
+int parse_ulong(const char *name, const char *str, unsigned long *val)
+{
+	return parse_ulong_delim(name, str, val, '\0', NULL);
+}
+
+int parse_ulong_range_delim(const char *name, const char *str,
+			    unsigned long *val, unsigned long min_val,
+			    unsigned long max_val, char delimiter,
+			    const char **next)
 {
 	int ret;
 
-	ret = parse_ulong(name, str, val);
+	ret = parse_ulong_delim(name, str, val, delimiter, next);
 	if (ret < 0)
 		return ret;
 	if (*val < min_val) {
@@ -88,6 +103,13 @@ int parse_ulong_range(const char *name, const char *str, unsigned long *val,
 	}
 
 	return 0;
+}
+
+int parse_ulong_range(const char *name, const char *str, unsigned long *val,
+		      unsigned long min_val, unsigned long max_val)
+{
+	return parse_ulong_range_delim(name, str, val, min_val, max_val, '\0',
+				       NULL);
 }
 
 int ignore_signal(int signum)
