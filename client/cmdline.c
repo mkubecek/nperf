@@ -80,8 +80,10 @@ static const char *help_text = "\n"
 "      Display this help text.\n"
 "  -H,--host <host>\n"
 "      Server to run test against (hostname, IPv4 or IPv6 address).\n"
-"  -i,--iterate <num>\n"
-"      Number of test iterations (default 1).\n"
+"  -i,--iterate <num>[,<num>]\n"
+"      Number of test iterations (default 1). If two values are provided,\n"
+"      they are minimum and maximum number of iterations to achieve the\n"
+"      confidence interval width (see -I option).\n"
 "  -I,--confidence <num>[,<float>]\n"
 "      Confidence level for displayed confidence intervals (default 95%).\n"
 "      Optional second argument is confidence interval width (default 10%).\n"
@@ -149,7 +151,7 @@ static int name_lookup(const char *name, const char *const names[],
 
 int parse_cmdline(int argc, char *argv[], struct client_config *config)
 {
-	unsigned long val;
+	unsigned long val, val2;
 	const char *arg;
 	double dval;
 	int ret;
@@ -164,11 +166,21 @@ int parse_cmdline(int argc, char *argv[], struct client_config *config)
 			config->server_host = optarg;
 			break;
 		case 'i':
-			ret = parse_ulong_range("iterations", optarg, &val,
-						0, MAX_ITERATIONS);
+			ret = parse_ulong_range_delim("iterations", optarg,
+						      &val, 1, MAX_ITERATIONS,
+						      ',', &arg);
 			if (ret < 0)
 				return -EINVAL;
-			config->min_iter = config->max_iter = val;
+			if (!*arg) {
+				config->min_iter = config->max_iter = val;
+				break;
+			}
+			ret = parse_ulong_range("iterations", ++arg, &val2,
+						1, MAX_ITERATIONS);
+			if (ret < 0)
+				return -EINVAL;
+			config->min_iter = (val < val2) ? val : val2;
+			config->max_iter = (val < val2) ? val2 : val;
 			break;
 		case 'I':
 			ret = parse_ulong_range_delim("confidence", optarg,
@@ -278,6 +290,11 @@ int parse_cmdline(int argc, char *argv[], struct client_config *config)
 		fputs("Use of confidence target requires at least 3 iterations (use -i option).\n",
 		      stderr);
 		return -EINVAL;
+	}
+	if (!config->confid_target_set &&
+	    config->min_iter != config->max_iter) {
+		config->confid_target = 10.0;
+		config->confid_target_set = true;
 	}
 
 	if (!config->msg_size) {
