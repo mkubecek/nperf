@@ -180,10 +180,10 @@ static int ctrl_send_start(struct server_ctrl_config *config)
 		.length		= htonl(sizeof(msg)),
 		.version	= htonl(CTRL_VERSION),
 		.test_id	= client_msg.test_id,
-		.port		= htons(config->port),
 	};
 	int ret;
 
+	msg.port = htons(config->port);
 	ret = ctrl_send_msg(config->ctrl_sd, &msg, sizeof(msg));
 	if (ret < 0)
 		return -EFAULT;

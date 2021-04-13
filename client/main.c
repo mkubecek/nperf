@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <limits.h>
+#include <math.h>
 #include <errno.h>
 #include <unistd.h>
 #include <netdb.h>
@@ -111,7 +112,7 @@ static int ctrl_connect_with_lookup(struct client_config *config)
 		.ai_socktype	= SOCK_STREAM,
 		.ai_protocol	= IPPROTO_TCP,
 	};
-	int sd;
+	int sd = -1;
 	struct addrinfo *results = NULL;
 	struct addrinfo *result;
 	int ret;
@@ -484,6 +485,7 @@ int all_iterations(struct client_config *config)
 	stats_mask = config->stats_mask;
 	confid_target_hw = 0.999 * config->confid_target / 200.0;
 	confid_target_set = config->confid_target_set;
+	confid_ival_hw = HUGE_VAL;
 
 	sum = sum_sqr = 0.0;
 	n_iter = 0;
