@@ -306,8 +306,8 @@ int parse_cmdline(int argc, char *argv[], struct client_config *config)
 			config->msg_size = 1U;
 			break;
 		default:
-			fprintf(stderr, "test mode '%s' not supported yet\n",
-				test_mode_names[config->test_mode]);
+			fprintf(stderr, "test mode %u not supported\n",
+				config->test_mode);
 			return -EINVAL;
 		}
 	}
