@@ -434,6 +434,8 @@ static int collect_stats(struct client_config *config, double *iter_result)
 						&server_stats[i], i, test_mode,
 						elapsed, &config->print_opts);
 	}
+	free(server_stats);
+
 	if (show_thread) {
 		xfer_stats_print_thread(&sum_client, &sum_server,
 					XFER_STATS_TOTAL, test_mode, elapsed,
