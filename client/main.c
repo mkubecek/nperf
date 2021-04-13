@@ -178,6 +178,11 @@ err:
 	return ret;
 }
 
+static void ctrl_close(struct client_config *config)
+{
+	close(config->ctrl_sd);
+}
+
 static int ctrl_initialize(struct client_config *config)
 {
 	int ret;
@@ -451,10 +456,10 @@ int one_iteration(struct client_config *config, double *iter_result)
 		goto err;
 	ret = prepare_buffers(config);
 	if (ret < 0)
-		goto err_ctrl;
+		goto err_close;
 	ret = start_workers(config);
 	if (ret < 0)
-		goto err_ctrl;
+		goto err_close;
 	ret = connect_workers(config);
 	if (ret < 0)
 		goto err_workers;
@@ -463,12 +468,13 @@ int one_iteration(struct client_config *config, double *iter_result)
 		goto err_workers;
 
 	collect_stats(config, iter_result);
+	ctrl_close(config);
 	return 0;
 
 err_workers:
 	kill_workers(config);
-err_ctrl:
-	close(config->ctrl_sd);
+err_close:
+	ctrl_close(config);
 err:
 	return 2;
 }
