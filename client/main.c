@@ -143,6 +143,7 @@ static int ctrl_connect_with_lookup(struct client_config *config)
 		close(sd);
 	}
 	if (ret < 0) {
+		freeaddrinfo(results);
 		fprintf(stderr, "failed to connect to '%s'\n",
 			config->server_host);
 		return ret;
@@ -150,6 +151,7 @@ static int ctrl_connect_with_lookup(struct client_config *config)
 
 	config->ctrl_sd = sd;
 	memcpy(&server_addr, result->ai_addr,  result->ai_addrlen);
+	freeaddrinfo(results);
 	return 0;
 }
 
