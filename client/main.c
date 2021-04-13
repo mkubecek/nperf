@@ -467,9 +467,9 @@ int one_iteration(struct client_config *config, double *iter_result)
 	if (ret < 0)
 		goto err_workers;
 
-	collect_stats(config, iter_result);
+	ret = collect_stats(config, iter_result);
 	ctrl_close(config);
-	return 0;
+	return ret;
 
 err_workers:
 	kill_workers(config);
